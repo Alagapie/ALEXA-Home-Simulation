@@ -57,6 +57,8 @@ import {
 
 import { MODE_LIST, MODE_PATCHES } from '../src/automation/modes.js'
 
+import { parseCommand } from '../src/assistant/brain.js'
+
 import {
   devicePower,
   houseEnergyReport,
@@ -1044,6 +1046,121 @@ test('no scene leaves a fridge door open', () => {
       assert.notEqual(patch.fridge.freezerOpen, true, `${modeId} must not open the freezer`)
     }
   }
+})
+
+/* ---------------------------------------------------------- NOVA brain --- */
+
+group('NOVA assistant: the command brain')
+
+const novaState = () => ({
+  devices: createInitialDevices(),
+  room: { temp: 24.5, humidity: 46 },
+  currentRoom: 'living',
+  activeMode: 'Manual',
+})
+const commits = (plan) => plan.actions.filter((a) => a.kind === 'commit')
+
+test('imperative commands hit exactly the devices they name', () => {
+  const plan = parseCommand('turn off the kitchen light', novaState())
+  assert.equal(plan.intent, 'command')
+  assert.deepEqual(commits(plan).map((a) => a.id).sort(), ['kitchenLight', 'kitchenStrip'])
+  assert.ok(commits(plan).every((a) => a.patch.power === false))
+})
+
+test('a named device never re-expands into its whole class', () => {
+  const plan = parseCommand('dim the table lamp', novaState())
+  assert.deepEqual(commits(plan).map((a) => a.id), ['tableLamp'])
+})
+
+test('a room scope reaches every light in that room and no others', () => {
+  const plan = parseCommand('turn on the bedroom lights', novaState())
+  assert.deepEqual(commits(plan).map((a) => a.id).sort(), ['bedLampLeft', 'bedLampRight', 'bedroomLight'])
+  // A bare room with an on/off verb means that room's lights.
+  const bare = parseCommand('turn on the kitchen', novaState())
+  assert.ok(commits(bare).every((a) => a.id.startsWith('kitchen')))
+})
+
+test('whole-house commands respect the safety exclusions', () => {
+  const ids = commits(parseCommand('turn off everything in the house', novaState())).map((a) => a.id)
+  assert.ok(ids.includes('tv') && ids.includes('ceilingLightA'))
+  assert.ok(!ids.includes('fridge'), 'the fridge must never be powered down')
+  assert.ok(!ids.includes('doorLock'), 'the lock stays under user control')
+  assert.ok(!ids.includes('mainDoor'), 'doors are not power devices')
+})
+
+test('numeric set commands reach the right attribute', () => {
+  assert.equal(commits(parseCommand('set the ac to 20 degrees', novaState()))[0].patch.targetTemp, 20)
+  assert.equal(commits(parseCommand('volume 30', novaState()))[0].patch.volume, 30)
+  assert.equal(commits(parseCommand('channel 5', novaState()))[0].patch.channel, 5)
+  assert.equal(commits(parseCommand('fan speed 3', novaState()))[0].patch.speed, 3)
+  assert.equal(commits(parseCommand('set the shower to 40 degrees', novaState()))[0].patch.temp, 40)
+})
+
+test('brightness patches stay free of float noise', () => {
+  const b = commits(parseCommand('dim the table lamp', novaState()))[0].patch.brightness
+  assert.equal(b, Math.round(b * 100) / 100)
+})
+
+test('scenes, navigation and lock verbs map to the right actions', () => {
+  assert.equal(parseCommand('movie mode', novaState()).actions[0].modeId, 'movie')
+  assert.equal(parseCommand('good night', novaState()).actions[0].modeId, 'bedtime')
+  assert.equal(parseCommand('i am leaving', novaState()).actions[0].modeId, 'away')
+  assert.deepEqual(parseCommand('go to the kitchen', novaState()).actions[0], { kind: 'nav', roomId: 'kitchen' })
+  const lock = commits(parseCommand('lock the front door', novaState()))[0]
+  assert.equal(lock.id, 'doorLock')
+  assert.equal(lock.patch.locked, true)
+})
+
+test('open / close reach covers, doors and the fridge', () => {
+  assert.ok(commits(parseCommand('open the curtains', novaState())).every((a) => a.patch.open === true))
+  assert.equal(commits(parseCommand('open the freezer', novaState()))[0].patch.freezerOpen, true)
+})
+
+test('questions answer with state instead of toggling anything', () => {
+  const plan = parseCommand('is the tv on', novaState())
+  assert.equal(plan.actions.length, 0)
+  assert.equal(plan.intent, 'question')
+  assert.match(plan.reply, /Standby/)
+  assert.equal(parseCommand("what's on", novaState()).intent, 'status')
+  assert.equal(parseCommand('how hot is it', novaState()).intent, 'climate')
+})
+
+test('the wake word prefix is stripped before parsing', () => {
+  const plan = parseCommand('ok nova turn off the kitchen light', novaState())
+  assert.equal(plan.intent, 'command')
+  assert.deepEqual(commits(plan).map((a) => a.id).sort(), ['kitchenLight', 'kitchenStrip'])
+})
+
+test('nonsense falls back to a helpful apology', () => {
+  const plan = parseCommand('asdkjhaskdjh', novaState())
+  assert.equal(plan.actions.length, 0)
+  assert.equal(plan.intent, 'unknown')
+  assert.match(plan.reply, /Try/)
+})
+
+test('greetings get a greeting, not an apology', () => {
+  for (const hi of ['hi', 'hello', 'hey nova', 'hi nova', 'ok nova']) {
+    const plan = parseCommand(hi, novaState())
+    assert.equal(plan.intent, 'greeting', `"${hi}" should greet`)
+    assert.equal(plan.actions.length, 0)
+  }
+})
+
+test('big batch replies stay short instead of listing every device', () => {
+  const plan = parseCommand('turn off everything', novaState())
+  assert.ok(commits(plan).length > 3, 'the batch really is big')
+  assert.ok(plan.reply.length < 60, `reply too long: ${plan.reply}`)
+  assert.match(plan.reply, /all \d+ are off/)
+  // Small commands still name their devices.
+  assert.match(parseCommand('turn off the table lamp', novaState()).reply, /Table Lamp/)
+})
+
+test('reports round their numbers and stay compact', () => {
+  const state = novaState()
+  state.room = { temp: 22.4321, humidity: 45.079 }
+  const reply = parseCommand("what's on", state).reply
+  assert.ok(!/\d+\.\d{3,}/.test(reply), `float noise leaked into: ${reply}`)
+  assert.ok(reply.length < 140, `report too long: ${reply}`)
 })
 
 /* --------------------------------------------------------------- report --- */
