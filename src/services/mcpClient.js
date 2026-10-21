@@ -10,10 +10,16 @@
  * shows (handshake, the tool list, and raw in/out frames per call).
  *
  * Responses can arrive as plain JSON or as `text/event-stream` (server's
- * choice per the spec), so both shapes are handled. All calls go through the
- * Vite dev proxy, keeping everything same-origin.
+ * choice per the spec), so both shapes are handled. The address comes from the
+ * connection module, so the server may live on another machine.
  */
-export const AURA_MCP_URL = '/mcp'
+
+import { apiUrl } from './auraConnection'
+
+const AURA_MCP_URL = '/mcp'
+
+/** The MCP endpoint on whichever server the connection panel selected. */
+export const mcpUrl = () => apiUrl(AURA_MCP_URL)
 
 /** Parse an MCP response body, which may be JSON or a single SSE frame. */
 async function readBody(res) {
@@ -58,11 +64,13 @@ async function readBody(res) {
  * two requests a demo actually needs. `frames` is a rolling log of raw
  * JSON-RPC in/out traffic (already JSON-safe) for the UI to render.
  */
-export function createMcpClient({ url = AURA_MCP_URL, clientName = 'home-simulation-3d' } = {}) {
+export function createMcpClient({ url, clientName = 'home-simulation-3d' } = {}) {
   let sessionId = null
   let protocolVersion = '2025-11-25'
   let nextId = 1
   const frames = []
+  // Resolved at request time so the panel's address applies immediately.
+  const endpoint = () => url || mcpUrl()
 
   const record = (direction, payload) => {
     frames.push({ direction, payload, at: Date.now() })
@@ -79,7 +87,7 @@ export function createMcpClient({ url = AURA_MCP_URL, clientName = 'home-simulat
       headers['MCP-Protocol-Version'] = protocolVersion
     }
     record('out', body)
-    const res = await fetch(url, {
+    const res = await fetch(endpoint(), {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
@@ -149,7 +157,7 @@ export function createMcpClient({ url = AURA_MCP_URL, clientName = 'home-simulat
       const sid = sessionId
       sessionId = null
       try {
-        await fetch(url, { method: 'DELETE', headers: { 'mcp-session-id': sid } })
+        await fetch(endpoint(), { method: 'DELETE', headers: { 'mcp-session-id': sid } })
       } catch {
         /* the server is gone; nothing to clean up */
       }

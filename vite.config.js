@@ -19,6 +19,7 @@ export default defineConfig({
       '/state': { target: AURA_SERVER, changeOrigin: true },
       '/events': { target: AURA_SERVER, changeOrigin: true },
       '/agent': { target: AURA_SERVER, changeOrigin: true },
+      '/vision': { target: AURA_SERVER, changeOrigin: true },
       '/mcp': { target: AURA_SERVER, changeOrigin: true },
     },
   },

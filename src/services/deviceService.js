@@ -11,11 +11,14 @@
  * reachable, which lets the store roll an optimistically applied state back
  * to the last confirmed value.
  *
- *   VITE_DEVICE_BACKEND=simulated   (default)
+ *   VITE_DEVICE_BACKEND=aura        (default; talks to the AuraAssist server)
+ *   VITE_DEVICE_BACKEND=simulated   (no network at all)
  *   VITE_DEVICE_BACKEND=fastapi     VITE_API_BASE=http://localhost:8000
  *   VITE_DEVICE_BACKEND=homeassistant
  *   VITE_DEVICE_BACKEND=mqtt
  */
+
+import { apiUrl as auraApiUrl, baseUrl as auraBaseUrl } from './auraConnection'
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -83,14 +86,21 @@ export class AuraAdapter {
   constructor(baseUrl = '') {
     this.kind = 'aura'
     this.label = 'AuraAssist server'
+    // '' means "use whatever the connection module resolved".
     this.baseUrl = baseUrl
     this.connected = false
     this.fallback = null
   }
 
+  /** '' (same-origin proxy) or the address chosen in the connection panel. */
+  get target() {
+    return this.baseUrl || auraBaseUrl()
+  }
+
+  /** Probe the configured target; fall back to the in-browser simulation. */
   async connect() {
     try {
-      const res = await fetch(`${this.baseUrl}/health`, { cache: 'no-store' })
+      const res = await fetch(auraApiUrl('/health'), { cache: 'no-store' })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const body = await res.json().catch(() => ({}))
       this.connected = true
@@ -106,12 +116,19 @@ export class AuraAdapter {
     }
   }
 
+  /** Re-probe after the connection panel points at a different server. */
+  async reconnect() {
+    this.connected = false
+    this.fallback = null
+    return this.connect()
+  }
+
   async send(deviceId, command, payload = {}) {
     if (!this.connected) await this.connect()
     // Server offline (or it went away mid-session): keep the house interactive.
     if (this.fallback) return this.fallback.send(deviceId, command, payload)
 
-    const res = await fetch(`${this.baseUrl}/state/patch`, {
+    const res = await fetch(auraApiUrl('/state/patch'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ device_id: deviceId, patch: payload, source: 'simulator' }),

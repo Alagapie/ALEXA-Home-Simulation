@@ -13,6 +13,7 @@ import { StatusBar } from './StatusBar'
 import { ViewControls, CameraShortcuts } from './ViewControls'
 import { VoiceAssistant } from './VoiceAssistant'
 import { AuraChat } from './AuraChat'
+import { ConnectionPanel } from './ConnectionPanel'
 import { ROOMS } from '../config/house'
 
 /** Top-right floating tools: view mode, reset and sidebar toggle. */
@@ -181,6 +182,7 @@ export function Hud() {
   const devices = useRoomStore((s) => s.devices)
   const room = ROOMS[currentRoom] || ROOMS.living
   const roomDevices = Object.values(devices).filter((d) => d.room === room.id).length
+  const [connectionOpen, setConnectionOpen] = useState(false)
 
   return (
     <div className="hud">
@@ -218,7 +220,8 @@ export function Hud() {
       <ViewControls />
       <CameraShortcuts />
       <HintToast />
-      <StatusBar />
+      <StatusBar onOpenConnection={() => setConnectionOpen(true)} />
+      <ConnectionPanel open={connectionOpen} onClose={() => setConnectionOpen(false)} />
       <AuraChat />
       <VoiceAssistant />
       <FloorPlanView />

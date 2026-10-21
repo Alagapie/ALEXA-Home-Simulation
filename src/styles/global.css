@@ -746,6 +746,90 @@ kbd { background: rgba(255,255,255,0.09); border: 1px solid var(--border); borde
 .aura__frame-body { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .aura__frame--idle { color: #55677c; font-style: italic; }
 
+/* --------------------------------------------- Server connection panel --- */
+
+.chip--btn {
+  cursor: pointer; font-family: inherit;
+  border-color: var(--border); background: rgba(255, 255, 255, 0.04);
+  transition: all 0.16s ease;
+}
+.chip--btn:hover { border-color: rgba(94, 234, 212, 0.45); color: #d9fff6; }
+
+.conn {
+  position: absolute; inset: 0; z-index: 40; display: grid; place-items: center;
+  background: rgba(6, 10, 15, 0.55); backdrop-filter: blur(3px);
+}
+.conn__panel {
+  width: min(92vw, 460px); display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 15px 15px; animation: slideInRight 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.conn__head { display: flex; align-items: center; gap: 9px; }
+.conn__badge {
+  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: 0 0 auto;
+  background: linear-gradient(140deg, var(--accent), #0ea5e9); color: #04211d;
+}
+.conn__id { min-width: 0; flex: 1; }
+.conn__name { font-size: 13px; font-weight: 660; letter-spacing: 0.06em; }
+.conn__status { font-size: 10.5px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conn__tool {
+  width: 28px; height: 28px; border-radius: 8px; flex: 0 0 auto; cursor: pointer;
+  display: grid; place-items: center; color: var(--muted);
+  border: 1px solid var(--border); background: rgba(255, 255, 255, 0.04);
+  transition: all 0.16s ease;
+}
+.conn__tool:hover { color: var(--text); border-color: var(--border-strong); }
+
+.conn__help { margin: 0; font-size: 11px; line-height: 1.55; color: var(--muted); }
+.conn__help strong { color: var(--text); font-weight: 620; }
+.conn__help code {
+  font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 10px;
+  color: #b6fff1; background: rgba(94, 234, 212, 0.1);
+  padding: 1px 4px; border-radius: 4px;
+}
+
+.conn__row {
+  display: flex; align-items: center; gap: 8px; color: var(--muted);
+  padding: 0 10px; border-radius: 10px;
+  border: 1px solid var(--border); background: rgba(255, 255, 255, 0.05);
+}
+.conn__row:focus-within { border-color: rgba(94, 234, 212, 0.45); }
+.conn__input {
+  flex: 1; min-width: 0; outline: none; border: none; background: transparent;
+  color: var(--text); font-family: inherit; font-size: 12px; padding: 9px 0;
+}
+.conn__input::placeholder { color: #5f7083; }
+
+.conn__actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.conn__btn {
+  cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+  font-family: inherit; font-size: 11px; font-weight: 620; color: #cfe0ef;
+  padding: 7px 11px; border-radius: 9px;
+  border: 1px solid var(--border); background: rgba(255, 255, 255, 0.045);
+  transition: all 0.15s ease;
+}
+.conn__btn:hover:not(:disabled) { background: rgba(94, 234, 212, 0.12); border-color: rgba(94, 234, 212, 0.4); color: #d9fff6; }
+.conn__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.conn__btn--ok { color: #04211d; background: var(--accent); border-color: transparent; }
+.conn__btn--ok:hover:not(:disabled) { background: #7ff0dd; }
+.conn__spin { animation: connSpin 0.9s linear infinite; }
+@keyframes connSpin { to { transform: rotate(360deg); } }
+
+.conn__result {
+  font-size: 11px; line-height: 1.5; padding: 8px 10px; border-radius: 9px;
+  border: 1px solid var(--border);
+}
+.conn__result--ok { color: #bbf7d0; border-color: rgba(110, 231, 168, 0.35); background: rgba(110, 231, 168, 0.08); }
+.conn__result--bad { color: #fecaca; border-color: rgba(248, 113, 113, 0.35); background: rgba(248, 113, 113, 0.08); }
+
+.conn__use-proxy {
+  cursor: pointer; align-self: flex-start; font-family: inherit;
+  font-size: 10.5px; color: var(--muted); text-decoration: underline;
+  background: none; border: none; padding: 0;
+}
+.conn__use-proxy:hover:not(:disabled) { color: var(--text); }
+.conn__use-proxy:disabled { cursor: default; opacity: 0.6; text-decoration: none; }
+
 @media (max-width: 860px) {
   .alexa__panel { width: min(92vw, 340px); }
   .aura__panel { width: min(94vw, 380px); }

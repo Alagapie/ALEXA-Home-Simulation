@@ -6,6 +6,8 @@ import { ROOMS } from './config/house'
 import { Hud } from './ui/Hud'
 import { deviceService } from './services/deviceService'
 import { connectAuraStream } from './services/auraStream'
+import { baseUrl, describeBaseUrl, discover } from './services/auraConnection'
+import { watchCamera } from './services/cameraService'
 import { useRoomStore } from './store/useRoomStore'
 
 /**
@@ -52,44 +54,87 @@ export default function App() {
   useEffect(() => {
     const store = useRoomStore.getState()
     let cancelled = false
+    let disconnect = () => {}
+    let stopCamera = null
     store.pushLog({ level: 'info', text: `Connecting to ${deviceService.label}…` })
 
-    deviceService
-      .connect?.()
-      .then(() => {
-        if (cancelled) return
-        useRoomStore.getState().pushLog({ level: 'ok', text: `${deviceService.label} online` })
-        useRoomStore.setState({ backendLabel: deviceService.label })
+    const start = async () => {
+      // Resolve which server we are talking to before anything opens a socket.
+      // `preferCurrent` keeps a working setup instant: the saved address is
+      // probed alone first, and the wider search only runs when it fails.
+      const state = useRoomStore.getState()
+      state.setConnection({
+        serverUrl: baseUrl(),
+        serverHost: describeBaseUrl(),
+        discovery: 'searching',
       })
-      .catch((error) => {
-        useRoomStore.getState().pushLog({ level: 'error', text: `${deviceService.label}: ${error.message}` })
+      const found = await discover()
+      if (cancelled) return
+      const resolved = useRoomStore.getState()
+      resolved.setConnection({
+        serverUrl: baseUrl(),
+        serverHost: describeBaseUrl(),
+        serverEngine: found?.health?.agent_engine ?? null,
+        discovery: found ? 'found' : 'failed',
+      })
+      if (found) {
+        resolved.pushLog({
+          level: 'ok',
+          text: `AuraAssist found at ${describeBaseUrl()} · engine ${found.health.agent_engine}`,
+        })
+      } else {
+        resolved.pushLog({
+          level: 'error',
+          text: 'No AuraAssist server found · open the connection chip in the status bar',
+        })
+      }
+
+      try {
+        await deviceService.connect?.()
+      } catch (error) {
+        if (!cancelled) {
+          useRoomStore.getState().pushLog({ level: 'error', text: `${deviceService.label}: ${error.message}` })
+        }
+      }
+      if (cancelled) return
+      useRoomStore.getState().pushLog({ level: 'ok', text: `${deviceService.label} online` })
+      useRoomStore.setState({ backendLabel: deviceService.label })
+
+      // Live bridge: every change made on the server (agent, routine, MCP tool)
+      // lands in the same store the 3D scene renders from.
+      disconnect = connectAuraStream({
+        onSnapshot: (snapshot) => useRoomStore.getState().applyAuraSnapshot(snapshot),
+        onStatus: ({ state: linkState }) => {
+          useRoomStore.getState().setBridgeStatus(linkState)
+          if (linkState === 'online') {
+            useRoomStore.getState().pushLog({
+              level: 'ok',
+              text: 'AuraAssist link live · the house follows the server',
+            })
+          } else if (linkState === 'reconnecting') {
+            useRoomStore.getState().pushLog({
+              level: 'error',
+              text: 'AuraAssist link lost · retrying (open the connection chip to find the server)',
+            })
+          }
+        },
       })
 
-    // Live bridge: every change made on the server (agent, routine, MCP tool)
-    // lands in the same store the 3D scene renders from.
-    const disconnect = connectAuraStream({
-      onSnapshot: (snapshot) => useRoomStore.getState().applyAuraSnapshot(snapshot),
-      onStatus: ({ state }) => {
-        useRoomStore.getState().setBridgeStatus(state)
-        if (state === 'online') {
-          useRoomStore.getState().pushLog({
-            level: 'ok',
-            text: 'AuraAssist link live · the house follows the server',
-          })
-        } else if (state === 'reconnecting') {
-          useRoomStore.getState().pushLog({
-            level: 'error',
-            text: 'AuraAssist link lost · retrying (is the server running on :8000?)',
-          })
-        }
-      },
-    })
+      // The 3D scene is also the home's camera: whenever the user looks at a
+      // different room, post a real frame so the VLM analyses what they see.
+      // It no-ops silently when the server is unreachable, so the 3D view is
+      // never affected by the server being offline.
+      stopCamera = watchCamera({ getRoom: () => useRoomStore.getState().currentRoom })
+    }
+
+    start()
 
     const interval = setInterval(() => useRoomStore.getState().tick(), 2000)
     const timer = setTimeout(() => setReady(true), 700)
     return () => {
       cancelled = true
       disconnect()
+      stopCamera?.()
       clearInterval(interval)
       clearTimeout(timer)
     }

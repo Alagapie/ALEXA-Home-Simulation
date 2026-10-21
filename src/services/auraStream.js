@@ -9,14 +9,19 @@
  * EventSource reconnects on its own; `onStatus` exists purely so the UI can be
  * honest about being offline instead of silently frozen.
  */
+
+import { apiUrl } from './auraConnection'
+
 export function connectAuraStream({
   onSnapshot,
   onStatus,
-  url = '/events/state',
+  url,
 } = {}) {
   let closed = false
   let source = null
   let lastStatus = null
+  // Resolved at connect time so the panel's address applies to new streams.
+  const target = () => url || apiUrl('/events/state')
 
   const report = (state, detail) => {
     if (state === lastStatus) return
@@ -27,7 +32,7 @@ export function connectAuraStream({
   const open = () => {
     if (closed) return
     report('connecting')
-    source = new EventSource(url)
+    source = new EventSource(target())
 
     source.onopen = () => report('online')
 

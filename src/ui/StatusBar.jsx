@@ -6,7 +6,7 @@ import { useRoomStore } from '../store/useRoomStore'
 import { RoomIcon } from './icons'
 
 /** Bottom bar: current room, active scene, household counts and conditions. */
-export function StatusBar() {
+export function StatusBar({ onOpenConnection }) {
   const devices = useRoomStore((s) => s.devices)
   const room = useRoomStore((s) => s.room)
   const activeMode = useRoomStore((s) => s.activeMode)
@@ -56,12 +56,18 @@ export function StatusBar() {
         <Fan size={12} /> {climateOn} climate
       </span>
       <span className="statusbar__spacer" />
-      <span
-        className={`chip hide-sm ${bridgeStatus === 'online' ? 'chip--accent' : ''}`}
-        title={bridgeStatus === 'online' ? 'Live link to the AuraAssist MCP server' : `AuraAssist link: ${bridgeStatus}`}
+      <button
+        type="button"
+        className={`chip chip--btn hide-sm ${bridgeStatus === 'online' ? 'chip--accent' : ''}`}
+        onClick={onOpenConnection}
+        title={
+          bridgeStatus === 'online'
+            ? 'Live link to the AuraAssist server - click to change server'
+            : `AuraAssist link: ${bridgeStatus} - click to find the server`
+        }
       >
         <Wifi size={12} /> {backendLabel}
-      </span>
+      </button>
       <span className="chip">
         <Clock size={12} /> {time}
       </span>

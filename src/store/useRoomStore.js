@@ -356,6 +356,13 @@ export const useRoomStore = create((set, get) => ({
   bridgeStatus: 'connecting',
   setBridgeStatus: (status) => set({ bridgeStatus: status }),
 
+  /** Which AuraAssist server we are pointed at (see services/auraConnection). */
+  serverUrl: '',
+  serverHost: '',
+  serverEngine: null,
+  discovery: 'idle', // idle | searching | found | failed
+  setConnection: (patch) => set(patch),
+
   /** Click on a 3D object: select it and run its primary action. */
   handleObjectClick: (id) => {
     const device = get().devices[id]

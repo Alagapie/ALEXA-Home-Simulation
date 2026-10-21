@@ -1,13 +1,16 @@
 /**
  * Thin HTTP helpers for the AuraAssist agent API (the orchestrator that uses
  * the MCP server under the hood). The chat panel is a plain browser client of
- * these endpoints; everything goes through the Vite dev proxy.
+ * these endpoints; the address comes from the connection module, so the server
+ * may live on another machine.
  */
 
+import { apiUrl } from './auraConnection'
+
 /** Ask the agent one conversational turn. Returns the standard turn object:
- *  {reply, tool_calls[], needs_user_input, pending, engine, timestamp}. */
+ *  {reply, tool_calls, needs_user_input, pending, engine, timestamp}. */
 export async function invokeAgent(message, sessionId = 'web-sim') {
-  const res = await fetch('/agent/invoke', {
+  const res = await fetch(apiUrl('/agent/invoke'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message, session_id: sessionId }),
@@ -20,7 +23,7 @@ export async function invokeAgent(message, sessionId = 'web-sim') {
 
 /** Forget the conversation (between demo takes). */
 export async function resetAgent(sessionId = 'web-sim') {
-  const res = await fetch('/agent/reset', {
+  const res = await fetch(apiUrl('/agent/reset'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ session_id: sessionId }),
@@ -30,13 +33,13 @@ export async function resetAgent(sessionId = 'web-sim') {
 
 /** Restore the default scene (the SSE stream pushes the new state too). */
 export async function resetState() {
-  const res = await fetch('/state/reset', { method: 'POST' })
+  const res = await fetch(apiUrl('/state/reset'), { method: 'POST' })
   return res.ok ? res.json() : null
 }
 
 /** Liveness + engine mode. */
 export async function fetchHealth() {
-  const res = await fetch('/health', { cache: 'no-store' })
+  const res = await fetch(apiUrl('/health'), { cache: 'no-store' })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
