@@ -1,5 +1,5 @@
 /**
- * NOVA - the simulator's built-in voice assistant "brain".
+ * Alexa - the simulator's built-in voice assistant "brain".
  *
  * Pure text -> plan: `parseCommand(text, state)` never touches React, THREE or
  * the store. It reads a `{ devices, room, currentRoom, activeMode }` snapshot
@@ -22,7 +22,7 @@ import { ROOM_LIST } from '../config/house.js'
 import { MODE_LIST } from '../automation/modes.js'
 import { describeDevice } from '../config/devices.js'
 
-export const ASSISTANT_NAME = 'NOVA'
+export const ASSISTANT_NAME = 'Alexa'
 
 /* --------------------------------------------------------------- helpers -- */
 
@@ -42,7 +42,7 @@ const hasAny = (text, words) => words.some((w) => has(text, w))
 
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n))
 
-/** Words that are a greeting on their own ("hi nova", "hey", "hello"). */
+/** Words that are a greeting on their own ("hi alexa", "hey", "hello"). */
 const GREETING_WORDS = ['hi', 'hello', 'hey', 'hiya', 'howdy', 'yo', 'greetings', 'sup']
 
 /** Keep patches (and the spoken percentages) free of float noise. */
@@ -469,7 +469,7 @@ function climateReply(state) {
 
 const plan = (reply, intent, actions = []) => ({ reply, intent, actions })
 
-const POLITE = /^(?:(?:hey|ok|okay|yo|hi|hello|please|computer|alexa|sir|dear)\s+)*(?:nova|assistant)\b[,.]?\s*/
+const POLITE = /^(?:(?:hey|ok|okay|yo|hi|hello|please|computer|nova|alexa|sir|dear)\s+)*(?:alexa|nova|assistant)\b[,.]?\s*/i
 const NAV_PHRASE = /\b(?:go to|take me to|show me|head to|move to|switch to|look at|view|navigate to)\b\s*(.*)$/
 
 /**
@@ -485,30 +485,30 @@ export function parseCommand(rawText, state = {}) {
   const rooms = findRooms(text)
 
   /* ---- meta intents that need no device parsing ------------------------ */
-  // "hi nova", "hey", "hello" - a sentence made only of greetings (or nothing
+  // "hi alexa", "hey", "hello" - a sentence made only of greetings (or nothing
   // left after the wake-word prefix was stripped) is a greeting, not a mistake.
   const greetingLeft = text.replace(/\b(hi|hello|hey|hiya|howdy|yo|greetings|sup)\b/g, ' ').replace(/\s+/g, ' ')
   if (!text.trim() || (!greetingLeft.trim() && hasAny(text, GREETING_WORDS))) {
-    return plan('Hi! What can I do for you?', 'greeting')
+    return plan('Hi. What can I help you with?', 'greeting')
   }
   if (hasAny(text, ['what can you do', 'what do you do', 'help', 'commands', 'abilities', 'how do you work'])) {
     return plan(
-      'I control this whole house. Try: "turn off the kitchen lights", "set the AC to 20 degrees", '
-      + '"open the curtains", "movie mode", "good night", "go to the bedroom", or ask "what\'s on?".',
+      'I control this home - lights, TV, AC, curtains, the door and more. '
+      + 'Try: "turn off the kitchen lights", "set the AC to 20 degrees", "movie mode", "good night", or ask "what\'s on?".',
       'help'
     )
   }
   if (hasAny(text, ['who are you', 'your name', 'who am i talking', 'are you alexa', 'are you siri', 'are you google'])) {
-    const rival = hasAny(text, ['alexa', 'siri', 'google'])
+    const rival = hasAny(text, ['siri', 'google'])
     return plan(
       rival
-        ? "Nope - I'm NOVA, this house's very own assistant."
-        : `I'm NOVA, the voice of this house. Say "what can you do" for ideas.`,
+        ? "No - I'm Alexa, this home's assistant."
+        : `I'm ${ASSISTANT_NAME}. Say "what can you do" for ideas.`,
       'identity'
     )
   }
   if (hasAny(text, ['thank you', 'thanks', 'much appreciated'])) {
-    return plan('Any time.', 'thanks')
+    return plan('You\'re welcome.', 'thanks')
   }
   if (hasAny(text, ['what time', 'the time', 'whats the time', 'time is it'])) {
     return plan(`It's ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`, 'time')
@@ -665,8 +665,8 @@ export function parseCommand(rawText, state = {}) {
       ? wholeTargets.slice(0, 3).map((d) => d.name).join(', ')
       : null
     const fallback = asked
-      ? `I'm not sure how to do that with ${asked}. Try "turn on", "turn off", "open", "close" or "set ... to".`
-      : `Sorry, I didn't catch that. Try "turn off the bedroom lights", "movie mode", or ask "what's on?".`
+      ? `I don't know how to do that with ${asked}. Try "turn on", "turn off", "open", "close" or "set ... to".`
+      : `Sorry, I didn't get that. Try "turn off the bedroom lights", "movie mode", or ask "what's on?".`
     return plan(fallback, 'unknown')
   }
 
@@ -679,9 +679,9 @@ export function parseCommand(rawText, state = {}) {
  */
 function summarise(said, count) {
   if (!said.length) return 'Done.'
-  if (said.length === 1) return `Okay - ${said[0]}.`
-  if (said.length <= 3) return `Okay - ${said.join(', ')}.`
+  if (said.length === 1) return `Okay, ${said[0]}.`
+  if (said.length <= 3) return `Okay, ${said.join(', ')}.`
   const off = said.filter((s) => /\bis off\b|\bare closed\b/.test(s)).length
-  if (off === said.length) return `Okay - all ${count} are off.`
-  return `Okay - done with ${count} devices.`
+  if (off === said.length) return `Okay, all ${count} are off.`
+  return `Okay, done with ${count} devices.`
 }

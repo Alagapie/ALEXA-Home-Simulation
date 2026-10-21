@@ -11,6 +11,7 @@ export function StatusBar() {
   const room = useRoomStore((s) => s.room)
   const activeMode = useRoomStore((s) => s.activeMode)
   const backendLabel = useRoomStore((s) => s.backendLabel)
+  const bridgeStatus = useRoomStore((s) => s.bridgeStatus)
   const currentRoom = useRoomStore((s) => s.currentRoom)
   const toggleReports = useRoomStore((s) => s.toggleReports)
 
@@ -55,7 +56,10 @@ export function StatusBar() {
         <Fan size={12} /> {climateOn} climate
       </span>
       <span className="statusbar__spacer" />
-      <span className="chip hide-sm">
+      <span
+        className={`chip hide-sm ${bridgeStatus === 'online' ? 'chip--accent' : ''}`}
+        title={bridgeStatus === 'online' ? 'Live link to the AuraAssist MCP server' : `AuraAssist link: ${bridgeStatus}`}
+      >
         <Wifi size={12} /> {backendLabel}
       </span>
       <span className="chip">

@@ -5,6 +5,7 @@ import { House } from './three/House'
 import { ROOMS } from './config/house'
 import { Hud } from './ui/Hud'
 import { deviceService } from './services/deviceService'
+import { connectAuraStream } from './services/auraStream'
 import { useRoomStore } from './store/useRoomStore'
 
 /**
@@ -58,15 +59,37 @@ export default function App() {
       .then(() => {
         if (cancelled) return
         useRoomStore.getState().pushLog({ level: 'ok', text: `${deviceService.label} online` })
+        useRoomStore.setState({ backendLabel: deviceService.label })
       })
       .catch((error) => {
         useRoomStore.getState().pushLog({ level: 'error', text: `${deviceService.label}: ${error.message}` })
       })
 
+    // Live bridge: every change made on the server (agent, routine, MCP tool)
+    // lands in the same store the 3D scene renders from.
+    const disconnect = connectAuraStream({
+      onSnapshot: (snapshot) => useRoomStore.getState().applyAuraSnapshot(snapshot),
+      onStatus: ({ state }) => {
+        useRoomStore.getState().setBridgeStatus(state)
+        if (state === 'online') {
+          useRoomStore.getState().pushLog({
+            level: 'ok',
+            text: 'AuraAssist link live · the house follows the server',
+          })
+        } else if (state === 'reconnecting') {
+          useRoomStore.getState().pushLog({
+            level: 'error',
+            text: 'AuraAssist link lost · retrying (is the server running on :8000?)',
+          })
+        }
+      },
+    })
+
     const interval = setInterval(() => useRoomStore.getState().tick(), 2000)
     const timer = setTimeout(() => setReady(true), 700)
     return () => {
       cancelled = true
+      disconnect()
       clearInterval(interval)
       clearTimeout(timer)
     }

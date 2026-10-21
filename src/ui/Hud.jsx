@@ -12,6 +12,7 @@ import { RoomNavigation } from './RoomNavigation'
 import { StatusBar } from './StatusBar'
 import { ViewControls, CameraShortcuts } from './ViewControls'
 import { VoiceAssistant } from './VoiceAssistant'
+import { AuraChat } from './AuraChat'
 import { ROOMS } from '../config/house'
 
 /** Top-right floating tools: view mode, reset and sidebar toggle. */
@@ -167,7 +168,7 @@ function HintToast() {
       style={{ cursor: 'pointer', border: '1px solid rgba(255,255,255,0.12)' }}
     >
       <MousePointerClick size={14} color="#5eead4" />
-      Click any object to control it · drag to orbit · scroll to zoom · press V to talk to NOVA, your voice assistant · use , . / 0 and the pad below to change viewpoint
+      Click any object to control it · drag to orbit · scroll to zoom · press V to talk to Alexa, your voice assistant · press A for AuraAssist · use , . / 0 and the pad below to change viewpoint
     </button>
   )
 }
@@ -218,6 +219,7 @@ export function Hud() {
       <CameraShortcuts />
       <HintToast />
       <StatusBar />
+      <AuraChat />
       <VoiceAssistant />
       <FloorPlanView />
       <ReportsView />

@@ -469,12 +469,12 @@ kbd { background: rgba(255,255,255,0.09); border: 1px solid var(--border); borde
 
 
 /* ============================================================================
-   Phase 3 - NOVA, the in-app voice assistant
+   Phase 3 - Alexa, the in-app voice assistant
    ========================================================================== */
 
-.nova { position: absolute; right: 14px; bottom: 64px; z-index: 18; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.alexa { position: absolute; right: 14px; bottom: 64px; z-index: 18; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
 
-.nova__orb {
+.alexa__orb {
   width: 52px; height: 52px; border-radius: 50%; cursor: pointer;
   display: grid; place-items: center; color: #b6fff1;
   border: 1px solid rgba(94, 234, 212, 0.45);
@@ -483,40 +483,40 @@ kbd { background: rgba(255,255,255,0.09); border: 1px solid var(--border); borde
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 22px rgba(94, 234, 212, 0.22);
   transition: transform 0.18s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
-.nova__orb:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 34px rgba(94, 234, 212, 0.38); }
-.nova__orb--active { animation: novaPulse 1.5s ease-out infinite; border-color: var(--accent); }
-.nova__orb--armed { border-color: rgba(110, 231, 168, 0.6); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 20px rgba(110, 231, 168, 0.3); }
-@keyframes novaPulse {
+.alexa__orb:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 34px rgba(94, 234, 212, 0.38); }
+.alexa__orb--active { animation: alexaPulse 1.5s ease-out infinite; border-color: var(--accent); }
+.alexa__orb--armed { border-color: rgba(110, 231, 168, 0.6); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 20px rgba(110, 231, 168, 0.3); }
+@keyframes alexaPulse {
   0% { box-shadow: 0 0 0 0 rgba(94, 234, 212, 0.45), 0 10px 30px rgba(0, 0, 0, 0.45); }
   70% { box-shadow: 0 0 0 16px rgba(94, 234, 212, 0), 0 10px 30px rgba(0, 0, 0, 0.45); }
   100% { box-shadow: 0 0 0 0 rgba(94, 234, 212, 0), 0 10px 30px rgba(0, 0, 0, 0.45); }
 }
 
-.nova__panel {
+.alexa__panel {
   width: 340px; max-height: min(62vh, 520px);
   display: flex; flex-direction: column; gap: 8px; padding: 11px 12px 12px;
   animation: slideInRight 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.nova__head { display: flex; align-items: center; gap: 9px; }
-.nova__badge {
+.alexa__head { display: flex; align-items: center; gap: 9px; }
+.alexa__badge {
   width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: 0 0 auto;
   background: linear-gradient(140deg, var(--accent), #0ea5e9); color: #04211d;
   box-shadow: 0 4px 14px rgba(94, 234, 212, 0.3);
 }
-.nova__id { min-width: 0; flex: 1; }
-.nova__name { font-size: 13px; font-weight: 660; letter-spacing: 0.08em; }
-.nova__status { font-size: 10.5px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.nova__tool {
+.alexa__id { min-width: 0; flex: 1; }
+.alexa__name { font-size: 13px; font-weight: 660; letter-spacing: 0.08em; }
+.alexa__status { font-size: 10.5px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alexa__tool {
   width: 28px; height: 28px; border-radius: 8px; flex: 0 0 auto; cursor: pointer;
   display: grid; place-items: center; color: var(--muted);
   border: 1px solid var(--border); background: rgba(255, 255, 255, 0.04);
   transition: all 0.16s ease;
 }
-.nova__tool:hover { color: var(--text); border-color: var(--border-strong); }
-.nova__tool--on { color: #b6ffd2; border-color: rgba(110, 231, 168, 0.5); background: rgba(110, 231, 168, 0.12); }
+.alexa__tool:hover { color: var(--text); border-color: var(--border-strong); }
+.alexa__tool--on { color: #b6ffd2; border-color: rgba(110, 231, 168, 0.5); background: rgba(110, 231, 168, 0.12); }
 
-.nova__log {
+.alexa__log {
   flex: 1; min-height: 118px; display: flex; flex-direction: column; gap: 5px;
   padding: 2px 3px; overflow-y: auto;
 }
@@ -528,7 +528,7 @@ kbd { background: rgba(255,255,255,0.09); border: 1px solid var(--border); borde
   align-self: flex-end; color: #d9fff6; border-bottom-right-radius: 4px;
   background: rgba(94, 234, 212, 0.13); border: 1px solid rgba(94, 234, 212, 0.28);
 }
-.msg--nova {
+.msg--alexa {
   align-self: flex-start; border-bottom-left-radius: 4px;
   background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
 }
@@ -538,38 +538,216 @@ kbd { background: rgba(255,255,255,0.09); border: 1px solid var(--border); borde
   background: transparent; border: 1px dashed var(--border-strong); border-bottom-left-radius: 4px;
 }
 
-.nova__chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.nova__chip {
+.alexa__chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.alexa__chip {
   cursor: pointer; font-size: 10.5px; font-weight: 600; color: #cfe0ef;
   padding: 4px 9px; border-radius: 20px;
   border: 1px solid var(--border); background: rgba(255, 255, 255, 0.045);
   transition: all 0.15s ease; white-space: nowrap;
 }
-.nova__chip:hover { background: rgba(94, 234, 212, 0.12); border-color: rgba(94, 234, 212, 0.4); color: #d9fff6; }
+.alexa__chip:hover { background: rgba(94, 234, 212, 0.12); border-color: rgba(94, 234, 212, 0.4); color: #d9fff6; }
 
-.nova__form { display: flex; gap: 6px; align-items: center; }
-.nova__input {
+.alexa__form { display: flex; gap: 6px; align-items: center; }
+.alexa__input {
   flex: 1; min-width: 0; outline: none; color: var(--text);
   font-family: inherit; font-size: 12px; padding: 8px 11px;
   border-radius: 10px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.05);
   transition: border-color 0.16s ease;
 }
-.nova__input::placeholder { color: #5f7083; }
-.nova__input:focus { border-color: rgba(94, 234, 212, 0.45); }
-.nova__mic, .nova__send {
+.alexa__input::placeholder { color: #5f7083; }
+.alexa__input:focus { border-color: rgba(94, 234, 212, 0.45); }
+.alexa__mic, .alexa__send {
   width: 34px; height: 34px; border-radius: 10px; flex: 0 0 auto; cursor: pointer;
   display: grid; place-items: center; color: #b6fff1;
   border: 1px solid rgba(94, 234, 212, 0.35); background: rgba(94, 234, 212, 0.1);
   transition: all 0.16s ease;
 }
-.nova__mic:hover, .nova__send:hover { background: rgba(94, 234, 212, 0.2); }
-.nova__mic:disabled { opacity: 0.4; cursor: not-allowed; }
-.nova__mic--on { animation: novaPulse 1.4s ease-out infinite; background: rgba(94, 234, 212, 0.22); border-color: var(--accent); }
-.nova__send { color: #04211d; background: var(--accent); border-color: transparent; }
-.nova__send:hover { background: #7ff0dd; }
+.alexa__mic:hover, .alexa__send:hover { background: rgba(94, 234, 212, 0.2); }
+.alexa__mic:disabled { opacity: 0.4; cursor: not-allowed; }
+.alexa__mic--on { animation: alexaPulse 1.4s ease-out infinite; background: rgba(94, 234, 212, 0.22); border-color: var(--accent); }
+.alexa__send { color: #04211d; background: var(--accent); border-color: transparent; }
+.alexa__send:hover { background: #7ff0dd; }
 
-.nova__hint { font-size: 10px; color: var(--muted); padding: 0 2px; }
+.alexa__hint { font-size: 10px; color: var(--muted); padding: 0 2px; }
+
+/* Phase 4 - AuraAssist: the MCP-powered agent panel (browser as MCP client) */
+
+.aura { position: absolute; left: 14px; bottom: 64px; z-index: 18; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+
+.aura__orb {
+  position: relative; height: 44px; padding: 0 16px 0 13px; border-radius: 22px; cursor: pointer;
+  display: flex; align-items: center; gap: 8px; color: #e4d9ff;
+  font-size: 12.5px; font-weight: 640; letter-spacing: 0.04em;
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.32), rgba(99, 102, 241, 0.18) 60%, rgba(13, 18, 25, 0.92));
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 22px rgba(139, 92, 246, 0.22);
+  transition: transform 0.18s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.aura__orb:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 30px rgba(139, 92, 246, 0.38); }
+.aura__orb-warn {
+  position: absolute; top: -3px; right: -3px; width: 11px; height: 11px; border-radius: 50%;
+  background: #f87171; border: 2px solid #0d1219;
+}
+
+.aura__panel {
+  width: 380px; max-height: min(70vh, 580px);
+  display: flex; flex-direction: column; gap: 8px; padding: 11px 12px 12px;
+  animation: slideInRight 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.aura__head { display: flex; align-items: center; gap: 8px; }
+.aura__badge {
+  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: 0 0 auto;
+  background: linear-gradient(140deg, #8b5cf6, #6366f1); color: #150a2e;
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+}
+.aura__id { min-width: 0; flex: 1; }
+.aura__name { font-size: 13px; font-weight: 660; letter-spacing: 0.08em; }
+.aura__status { font-size: 10.5px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.aura__tabs { display: flex; gap: 3px; flex: 0 0 auto; }
+.aura__tab {
+  cursor: pointer; font-size: 10px; font-weight: 650; letter-spacing: 0.05em;
+  display: flex; align-items: center; gap: 4px; color: var(--muted);
+  padding: 5px 8px; border-radius: 8px;
+  border: 1px solid transparent; background: transparent;
+  transition: all 0.15s ease;
+}
+.aura__tab:hover { color: var(--text); }
+.aura__tab--on { color: #e4d9ff; border-color: rgba(167, 139, 250, 0.4); background: rgba(139, 92, 246, 0.14); }
+
+.aura__tool {
+  width: 28px; height: 28px; border-radius: 8px; flex: 0 0 auto; cursor: pointer;
+  display: grid; place-items: center; color: var(--muted);
+  border: 1px solid var(--border); background: rgba(255, 255, 255, 0.04);
+  transition: all 0.16s ease;
+}
+.aura__tool:hover { color: var(--text); border-color: var(--border-strong); }
+
+.aura__log {
+  flex: 1; min-height: 150px; display: flex; flex-direction: column; gap: 5px;
+  padding: 2px 3px; overflow-y: auto;
+}
+.msg--aura { max-width: 96%; }
+
+/* Tool-call log under an assistant reply: name + args + result in one row. */
+.aura__tools {
+  margin-top: 6px; display: flex; flex-direction: column; gap: 3px;
+  border-left: 2px solid rgba(139, 92, 246, 0.5); padding-left: 7px;
+}
+.aura__tool-row {
+  display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+  font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 9.5px; line-height: 1.45;
+}
+.aura__tool-name { color: #c4b5fd; font-weight: 650; flex: 0 0 auto; }
+.aura__tool-args { color: #6b7f95; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 45%; }
+.aura__tool-result { color: #9fb3c8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.aura__engine {
+  display: block; margin-top: 4px; font-size: 8.5px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: #7c6aa3;
+}
+
+/* Guardrail confirmation bar (unlock / routines need an explicit yes). */
+.aura__confirm {
+  display: flex; flex-direction: column; gap: 7px; padding: 9px 10px;
+  border-radius: 11px; border: 1px solid rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.08);
+}
+.aura__confirm-text { font-size: 11.5px; color: #fde68a; font-weight: 600; }
+.aura__confirm-actions { display: flex; gap: 6px; }
+
+.aura__btn {
+  cursor: pointer; font-size: 10.5px; font-weight: 640; color: #d6c9ff;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border-radius: 8px;
+  border: 1px solid rgba(167, 139, 250, 0.4); background: rgba(139, 92, 246, 0.12);
+  transition: all 0.15s ease;
+}
+.aura__btn:hover { background: rgba(139, 92, 246, 0.24); }
+.aura__btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.aura__btn--ok { color: #bbf7d0; border-color: rgba(110, 231, 168, 0.45); background: rgba(110, 231, 168, 0.1); }
+.aura__btn--ok:hover { background: rgba(110, 231, 168, 0.2); }
+.aura__btn--no { color: #fecaca; border-color: rgba(248, 113, 113, 0.45); background: rgba(248, 113, 113, 0.1); }
+.aura__btn--no:hover { background: rgba(248, 113, 113, 0.2); }
+
+.aura__chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.aura__chip {
+  cursor: pointer; font-size: 10.5px; font-weight: 600; color: #d5c9f0;
+  padding: 4px 9px; border-radius: 20px;
+  border: 1px solid var(--border); background: rgba(255, 255, 255, 0.045);
+  transition: all 0.15s ease; white-space: nowrap;
+}
+.aura__chip:hover { background: rgba(139, 92, 246, 0.14); border-color: rgba(167, 139, 250, 0.45); color: #e9e0ff; }
+.aura__chip:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.aura__form { display: flex; gap: 6px; align-items: center; }
+.aura__input {
+  flex: 1; min-width: 0; outline: none; color: var(--text);
+  font-family: inherit; font-size: 12px; padding: 8px 11px;
+  border-radius: 10px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.05);
+  transition: border-color 0.16s ease;
+}
+.aura__input::placeholder { color: #5f7083; }
+.aura__input:focus { border-color: rgba(167, 139, 250, 0.5); }
+.aura__send {
+  width: 34px; height: 34px; border-radius: 10px; flex: 0 0 auto; cursor: pointer;
+  display: grid; place-items: center; color: #150a2e;
+  border: 1px solid transparent; background: #a78bfa;
+  transition: all 0.16s ease;
+}
+.aura__send:hover { background: #bfa9ff; }
+
+.aura__hint { font-size: 10px; color: var(--muted); padding: 0 2px; display: flex; align-items: center; gap: 5px; }
+
+/* ------------------------------------------------------------- MCP tab --- */
+
+.aura__mcp { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.aura__mcp-head { display: flex; align-items: center; gap: 7px; }
+.aura__dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; background: #64748b; }
+.aura__dot--ready { background: #34d399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.6); }
+.aura__dot--error { background: #f87171; }
+.aura__dot--connecting { background: #fbbf24; animation: alexaPulse 1.2s ease-out infinite; }
+.aura__mcp-state { flex: 1; min-width: 0; font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.aura__mcp-body { display: flex; flex-direction: column; gap: 8px; max-height: min(52vh, 430px); overflow-y: auto; padding-right: 4px; }
+
+.aura__tool-list { display: flex; flex-direction: column; gap: 5px; }
+.aura__tool-item {
+  padding: 7px 9px; border-radius: 9px;
+  border: 1px solid var(--border); background: rgba(255, 255, 255, 0.03);
+}
+.aura__tool-item-name { font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 10.5px; font-weight: 650; color: #c4b5fd; }
+.aura__tool-item-desc { font-size: 9.5px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+.aura__tool-item-call { display: flex; align-items: center; gap: 7px; margin-top: 5px; }
+.aura__tool-item-call code {
+  flex: 1; min-width: 0; font-size: 9px; color: #8ba3ba;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.aura__result {
+  margin: 0; padding: 8px 10px; border-radius: 9px; max-height: 150px; overflow-y: auto;
+  font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 9.5px; line-height: 1.5; color: #bbf7d0;
+  border: 1px solid rgba(110, 231, 168, 0.3); background: rgba(110, 231, 168, 0.06);
+  white-space: pre-wrap; word-break: break-word;
+}
+
+.aura__frames {
+  display: flex; flex-direction: column; gap: 2px; padding: 7px 8px; border-radius: 9px;
+  border: 1px solid var(--border); background: rgba(0, 0, 0, 0.25);
+}
+.aura__frame {
+  display: flex; gap: 6px; font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 8.8px; line-height: 1.5; color: #7d93a8;
+}
+.aura__frame-dir { flex: 0 0 auto; font-weight: 700; }
+.aura__frame--out .aura__frame-dir { color: #c4b5fd; }
+.aura__frame--in .aura__frame-dir { color: #6ee7b7; }
+.aura__frame-body { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.aura__frame--idle { color: #55677c; font-style: italic; }
 
 @media (max-width: 860px) {
-  .nova__panel { width: min(92vw, 340px); }
+  .alexa__panel { width: min(92vw, 340px); }
+  .aura__panel { width: min(94vw, 380px); }
+  .aura { left: 10px; bottom: 60px; }
 }

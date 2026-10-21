@@ -62,6 +62,24 @@ const enqueueScene = (task) => {
   return sceneChain
 }
 
+/**
+ * Devices with a local command in flight.
+ *
+ * Snapshots arriving from the server are skipped for these ids, so a slow echo
+ * of an earlier command can never overwrite a newer optimistic click. The next
+ * snapshot after the command settles carries the authoritative value anyway.
+ */
+const pendingLocal = new Map()
+
+const markPending = (id, delta) => {
+  const next = (pendingLocal.get(id) || 0) + delta
+  if (next > 0) pendingLocal.set(id, next)
+  else pendingLocal.delete(id)
+}
+
+/** Fields that describe a device's identity/rendering, not its live state. */
+const IDENTITY_KEYS = new Set(['id', 'type', 'room', 'name', 'lightKind', 'propKind'])
+
 const commandFor = (device) => {
   switch (device?.type) {
     case 'light': return 'light.set'
@@ -289,6 +307,7 @@ export const useRoomStore = create((set, get) => ({
       activeMode: options.keepMode ? s.activeMode : 'Manual',
     }))
 
+    markPending(id, +1)
     try {
       await deviceService.send(id, command, { ...patch })
       get().pushLog({
@@ -298,8 +317,44 @@ export const useRoomStore = create((set, get) => ({
     } catch (error) {
       set((s) => ({ devices: { ...s.devices, [id]: previous } }))
       get().pushLog({ level: 'error', text: `${previous.name} · command failed (${error.message})` })
+    } finally {
+      markPending(id, -1)
     }
   },
+
+  /**
+   * Apply a full snapshot received from the AuraAssist server (SSE).
+   *
+   * Only live state fields are merged - identity and rendering fields stay
+   * local - and devices with a command in flight are skipped, so our own
+   * optimistic writes always win over their echo.
+   */
+  applyAuraSnapshot: (snapshot) => {
+    const incoming = snapshot?.devices
+    if (!Array.isArray(incoming)) return
+    set((s) => {
+      let devices = null
+      for (const remote of incoming) {
+        if (!remote?.id || pendingLocal.get(remote.id)) continue
+        const local = s.devices[remote.id]
+        if (!local) continue
+        let merged = null
+        for (const [key, value] of Object.entries(remote)) {
+          if (IDENTITY_KEYS.has(key) || local[key] === value) continue
+          if (!merged) merged = { ...local }
+          merged[key] = value
+        }
+        if (!merged) continue
+        if (!devices) devices = { ...s.devices }
+        devices[remote.id] = merged
+      }
+      return devices ? { devices } : {}
+    })
+  },
+
+  /** 'connecting' | 'online' | 'reconnecting' - the link to the MCP server. */
+  bridgeStatus: 'connecting',
+  setBridgeStatus: (status) => set({ bridgeStatus: status }),
 
   /** Click on a 3D object: select it and run its primary action. */
   handleObjectClick: (id) => {

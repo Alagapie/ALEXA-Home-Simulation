@@ -74,11 +74,11 @@ Serves the built `dist/` locally.
 
 ```
 src/
-├── assistant/brain.js        # NOVA voice assistant: pure text -> action planner
+├── assistant/brain.js        # Alexa voice assistant: pure text -> action planner
 ├── automation/modes.js      # Automation scene definitions (Movie/Sleep/Away/Bright)
 ├── config/devices.js        # Initial device state and device metadata
 ├── services/deviceService.js # Device abstraction layer (adapters)
-├── services/speech.js       # Web Speech API wrappers (voice input/output for NOVA)
+├── services/speech.js       # Web Speech API wrappers (voice input/output for Alexa)
 ├── store/useRoomStore.js     # Zustand store (single source of truth)
 ├── styles/global.css        # Global styles
 ├── three/
@@ -127,14 +127,14 @@ Stubs log intent and return success; replace send/subscribe with real implementa
 
 Automation scenes are defined in `src/automation/modes.js` as `MODE_PATCHES`. `applyMode()` applies patches via the same `commit()` path with `keepMode: true`, ensuring 3D and UI stay in sync. Scene execution is serialized (last request wins, manual commands cancel pending scenes).
 
-### Voice assistant (NOVA)
+### Voice assistant (Alexa)
 
 The simulator ships its own "Alexa": a floating assistant orb (press **V**, or click it) that understands natural-language commands and speaks its replies.
 
 - `src/assistant/brain.js` is a **pure text → plan** module (no React/THREE imports): it resolves rooms, devices, verbs, numbers and scenes, and returns `{ reply, actions }`. The component replays those actions through the same store commands a click uses, so voice, 3D and UI can never disagree. It is covered by `npm test`.
 - `src/services/speech.js` wraps the browser's Web Speech API: `SpeechRecognition` for voice input (Chrome/Edge) and `speechSynthesis` for spoken replies. No dependencies, no API keys.
 - The panel degrades gracefully: where voice input is unavailable, it is a plain text chat with the same command brain.
-- An optional wake word ("Hey NOVA") keeps a continuous recogniser armed; the mic pauses itself while a reply is spoken so the assistant never hears itself.
+- An optional wake word ("Hey Alexa") keeps a continuous recogniser armed; the mic pauses itself while a reply is spoken so the assistant never hears itself.
 
 Example commands: *"turn off the kitchen lights"*, *"set the AC to 20 degrees"*, *"dim the table lamp"*, *"open the curtains"*, *"lock the front door"*, *"volume 30"*, *"movie mode"*, *"good night"*, *"go to the bedroom"*, *"what's on?"*, *"is the TV on?"*.
 
@@ -165,7 +165,7 @@ Example commands: *"turn off the kitchen lights"*, *"set the AC to 20 degrees"*,
 - Contextual device panel on selection
 - Master controls (All Lights Off, All Off)
 - Automation modes (Movie/Sleep/Away/Bright)
-- Voice assistant NOVA - speak or type commands ("Hey NOVA" wake word optional)
+- Voice assistant Alexa - speak or type commands ("Hey Alexa" wake word optional)
 - Status bar (active devices, room temp/humidity, backend, time)
 - Activity log
 

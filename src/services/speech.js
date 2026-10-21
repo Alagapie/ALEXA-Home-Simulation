@@ -1,5 +1,5 @@
 /**
- * Browser speech I/O for the NOVA assistant.
+ * Browser speech I/O for the Alexa assistant.
  *
  * Voice output uses the built-in `speechSynthesis` engine and voice input uses
  * `SpeechRecognition` (Chrome / Edge ship it; Firefox does not). Both are free,

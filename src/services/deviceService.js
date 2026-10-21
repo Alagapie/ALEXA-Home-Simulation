@@ -68,6 +68,61 @@ export class FastApiDeviceAdapter {
   }
 }
 
+/**
+ * The AuraAssist MCP server (python -m uvicorn server.main:app --port 8000).
+ *
+ * Every UI action is mirrored to the server's home state, which is the single
+ * source of truth for the agent, routines and the MCP tools. The server also
+ * streams its own changes back over SSE (see services/auraStream.js), so the
+ * 3D house follows whatever the assistant does in real time.
+ *
+ * When the server is not running the simulator stays fully usable: the adapter
+ * degrades to the in-browser simulation instead of failing every click.
+ */
+export class AuraAdapter {
+  constructor(baseUrl = '') {
+    this.kind = 'aura'
+    this.label = 'AuraAssist server'
+    this.baseUrl = baseUrl
+    this.connected = false
+    this.fallback = null
+  }
+
+  async connect() {
+    try {
+      const res = await fetch(`${this.baseUrl}/health`, { cache: 'no-store' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const body = await res.json().catch(() => ({}))
+      this.connected = true
+      this.fallback = null
+      this.label = `AuraAssist · ${body.agent_engine === 'bedrock' ? 'Bedrock' : 'MCP'}`
+      return true
+    } catch {
+      this.fallback = new SimulatedDeviceAdapter()
+      await this.fallback.connect()
+      this.connected = true
+      this.label = 'Simulated devices (AuraAssist server offline)'
+      return true
+    }
+  }
+
+  async send(deviceId, command, payload = {}) {
+    if (!this.connected) await this.connect()
+    // Server offline (or it went away mid-session): keep the house interactive.
+    if (this.fallback) return this.fallback.send(deviceId, command, payload)
+
+    const res = await fetch(`${this.baseUrl}/state/patch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_id: deviceId, patch: payload, source: 'simulator' }),
+    })
+    if (!res.ok) throw new Error(`Bridge rejected the command (${res.status})`)
+    const body = await res.json()
+    if (body.error) throw new Error(body.error)
+    return body
+  }
+}
+
 /** Home Assistant REST example - point at a long-lived access token. */
 export class HomeAssistantAdapter {
   constructor(baseUrl = 'http://homeassistant.local:8123', token = '') {
@@ -123,6 +178,8 @@ export class MqttDeviceAdapter {
 
 export function createDeviceService(kind = 'simulated', options = {}) {
   switch (kind) {
+    case 'aura':
+      return new AuraAdapter(options.baseUrl || '')
     case 'fastapi':
       return new FastApiDeviceAdapter(options.baseUrl || import.meta.env.VITE_API_BASE)
     case 'homeassistant':
@@ -135,4 +192,6 @@ export function createDeviceService(kind = 'simulated', options = {}) {
   }
 }
 
-export const deviceService = createDeviceService(import.meta.env.VITE_DEVICE_BACKEND || 'simulated')
+// Default is the AuraAssist bridge; it falls back to simulated devices when the
+// server is offline, so the 3D house always works.
+export const deviceService = createDeviceService(import.meta.env.VITE_DEVICE_BACKEND || 'aura')

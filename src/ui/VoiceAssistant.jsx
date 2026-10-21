@@ -8,7 +8,7 @@ import {
 import { ROOMS } from '../config/house'
 
 /**
- * NOVA - the in-app voice assistant.
+ * Alexa - the in-app voice assistant.
  *
  * A floating orb plus a small chat panel. The microphone turns speech into
  * text (Web Speech API); every command then flows through `parseCommand` and
@@ -18,10 +18,10 @@ import { ROOMS } from '../config/house'
  * interface when voice input is unavailable (e.g. Firefox).
  *
  * Push the mic and talk, type into the box, or arm the wake word and keep
- * saying "Hey NOVA".
+ * saying "Hey Alexa".
  */
 
-const WAKE_WORDS = /^(?:hey |ok |okay |yo |hi )?nova\b[,.!?…]?\s*/i
+const WAKE_WORDS = /^(?:hey |ok |okay |yo |hi )?alexa\b[,.!?…]?\s*/i
 
 const SUGGESTIONS = [
   'Movie mode', 'Good night', 'Turn off everything', "What's on?",
@@ -35,7 +35,7 @@ const isTyping = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAR
 export function VoiceAssistant() {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([
-    { id: ++chatId, role: 'nova', text: `Hi, I'm ${ASSISTANT_NAME}. Ask me to control anything - "turn off the kitchen light", "movie mode", "what's on?"` },
+    { id: ++chatId, role: 'alexa', text: `Hi, I'm ${ASSISTANT_NAME}. Ask me to control anything - "turn off the kitchen light", "movie mode", "what's on?"` },
   ])
   const [draft, setDraft] = useState('')
   const [interim, setInterim] = useState('')
@@ -76,7 +76,7 @@ export function VoiceAssistant() {
     // Reply first - the simulated device acks (~150ms each) must never make
     // the user wait. Patches land optimistically the moment commit() is
     // called, so the 3D scene reacts instantly too.
-    addMessage('nova', plan.reply)
+    addMessage('alexa', plan.reply)
     if (voiceOutputSupported) {
       wakeSuspendedRef.current = true
       wakeRecRef.current?.stop()
@@ -150,7 +150,7 @@ export function VoiceAssistant() {
         setInterim('')
         const stripped = t.replace(WAKE_WORDS, '')
         if (stripped.toLowerCase() !== t.toLowerCase()) {
-          // "Hey NOVA ..." - the command may follow the wake word inline.
+          // "Hey Alexa ..." - the command may follow the wake word inline.
           if (stripped.trim()) handleCommandRef.current?.(stripped.trim())
           else { armUntilRef.current = Date.now() + 12000; speak(`Yes?`) }
         } else if (Date.now() < armUntilRef.current) {
@@ -224,7 +224,7 @@ export function VoiceAssistant() {
     : listening
       ? 'Listening…'
       : wakeOn
-        ? 'Always listening for "Hey NOVA"'
+        ? 'Always listening for "Hey Alexa"'
         : 'Ask me anything - or push the mic'
 
   const submit = (event) => {
@@ -238,11 +238,11 @@ export function VoiceAssistant() {
   const micTitle = voiceInputSupported ? 'Push to talk' : 'Voice input needs Chrome or Edge'
 
   return (
-    <div className="nova">
+    <div className="alexa">
       {!open && (
         <button
           type="button"
-          className={`nova__orb ${listening || busy ? 'nova__orb--active' : ''} ${wakeOn ? 'nova__orb--armed' : ''}`}
+          className={`alexa__orb ${listening || busy ? 'alexa__orb--active' : ''} ${wakeOn ? 'alexa__orb--armed' : ''}`}
           onClick={() => { setOpen(true); inputRef.current?.focus() }}
           title={`${ASSISTANT_NAME} - voice assistant (V)`}
           aria-label="Open the voice assistant"
@@ -252,19 +252,19 @@ export function VoiceAssistant() {
       )}
 
       {open && (
-        <div className="nova__panel glass" role="dialog" aria-label={`${ASSISTANT_NAME} voice assistant`}>
-          <div className="nova__head">
-            <span className="nova__badge"><Sparkles size={15} /></span>
-            <div className="nova__id">
-              <div className="nova__name">{ASSISTANT_NAME}</div>
-              <div className="nova__status">{statusLine}</div>
+        <div className="alexa__panel glass" role="dialog" aria-label={`${ASSISTANT_NAME} voice assistant`}>
+          <div className="alexa__head">
+            <span className="alexa__badge"><Sparkles size={15} /></span>
+            <div className="alexa__id">
+              <div className="alexa__name">{ASSISTANT_NAME}</div>
+              <div className="alexa__status">{statusLine}</div>
             </div>
             {voiceInputSupported && (
               <button
                 type="button"
-                className={`nova__tool ${wakeOn ? 'nova__tool--on' : ''}`}
+                className={`alexa__tool ${wakeOn ? 'alexa__tool--on' : ''}`}
                 onClick={() => setWakeOn((v) => !v)}
-                title={'Listen continuously for "Hey NOVA"'}
+                title={'Listen continuously for "Hey Alexa"'}
                 aria-label="Toggle the wake word"
               >
                 <Ear size={15} />
@@ -272,7 +272,7 @@ export function VoiceAssistant() {
             )}
             <button
               type="button"
-              className="nova__tool"
+              className="alexa__tool"
               onClick={() => setOpen(false)}
               title="Close (Esc)"
               aria-label="Close the assistant"
@@ -281,24 +281,24 @@ export function VoiceAssistant() {
             </button>
           </div>
 
-          <div className="nova__log scroll" ref={logRef}>
+          <div className="alexa__log scroll" ref={logRef}>
             {messages.map((m) => (
               <div key={m.id} className={`msg msg--${m.role}`}>{m.text}</div>
             ))}
-            {busy && <div className="msg msg--nova msg--busy">Working…</div>}
+            {busy && <div className="msg msg--alexa msg--busy">Working…</div>}
             {interim && <div className="msg msg--interim">{interim}…</div>}
           </div>
 
-          <div className="nova__chips">
+          <div className="alexa__chips">
             {SUGGESTIONS.map((s) => (
-              <button key={s} type="button" className="nova__chip" onClick={() => handleCommand(s)}>{s}</button>
+              <button key={s} type="button" className="alexa__chip" onClick={() => handleCommand(s)}>{s}</button>
             ))}
           </div>
 
-          <form className="nova__form" onSubmit={submit}>
+          <form className="alexa__form" onSubmit={submit}>
             <input
               ref={inputRef}
-              className="nova__input"
+              className="alexa__input"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               placeholder={`Say it or type it - e.g. "lights out"`}
@@ -306,7 +306,7 @@ export function VoiceAssistant() {
             />
             <button
               type="button"
-              className={`nova__mic ${listening ? 'nova__mic--on' : ''}`}
+              className={`alexa__mic ${listening ? 'alexa__mic--on' : ''}`}
               onClick={() => (listening ? stopListening() : startListening())}
               disabled={!voiceInputSupported}
               title={micTitle}
@@ -314,14 +314,14 @@ export function VoiceAssistant() {
             >
               {listening ? <MicOff size={15} /> : <Mic size={15} />}
             </button>
-            <button type="submit" className="nova__send" title="Send" aria-label="Send">
+            <button type="submit" className="alexa__send" title="Send" aria-label="Send">
               <Send size={15} />
             </button>
           </form>
 
-          {note && <div className="nova__hint">{note}</div>}
+          {note && <div className="alexa__hint">{note}</div>}
           {!note && !voiceInputSupported && (
-            <div className="nova__hint">Voice input needs Chrome or Edge - typing works everywhere.</div>
+            <div className="alexa__hint">Voice input needs Chrome or Edge - typing works everywhere.</div>
           )}
         </div>
       )}
