@@ -22,36 +22,64 @@ export const voiceOutputSupported = typeof window !== 'undefined' && 'speechSynt
 
 let cachedVoice = null
 
+/**
+ * Score a voice so we can pick the most natural-sounding one available.
+ * Higher is better.
+ */
+function scoreVoice(v) {
+  const n = v.name.toLowerCase()
+  // Top tier: Microsoft Neural / Google online voices
+  if (/aria|jenny|natasha|sonia|libby|ryan|guy|neural/i.test(n) && v.localService === false) return 100
+  if (/google us english|google uk english/i.test(n)) return 90
+  // Second tier: quality named offline voices
+  if (/aria|jenny|sonia|libby/i.test(n)) return 80
+  if (/zira|david|hazel|mark|susan|karen|daniel|moira/i.test(n)) return 70
+  if (/samantha|alex|victoria|serena|fiona/i.test(n)) return 65
+  // Third tier: any online English voice
+  if (/^en/i.test(v.lang) && v.localService === false) return 50
+  // Fourth tier: any English voice
+  if (/^en/i.test(v.lang)) return 30
+  return 0
+}
+
 function pickVoice() {
   if (!voiceOutputSupported) return null
   const voices = window.speechSynthesis.getVoices()
   if (!voices.length) return null
   const english = voices.filter((v) => /^en/i.test(v.lang))
   const pool = english.length ? english : voices
-  const preferred = pool.find((v) => /aria|jenny|zira|natural|online|google us english/i.test(v.name))
-  return preferred || pool[0]
+  // Sort by score, pick the best
+  const sorted = [...pool].sort((a, b) => scoreVoice(b) - scoreVoice(a))
+  return sorted[0] || pool[0]
 }
 
 if (voiceOutputSupported) {
   // Voices load asynchronously in most browsers; refresh the cache when they arrive.
-  window.speechSynthesis.onvoiceschanged = () => { cachedVoice = pickVoice() }
+  window.speechSynthesis.onvoiceschanged = () => {
+    cachedVoice = null // force re-pick on next speak() so we always get the best available
+    cachedVoice = pickVoice()
+  }
 }
 
 /** Speak `text`, resolving when the utterance finishes (or fails / is cancelled). */
-export function speak(text, { rate = 1.03, pitch = 1 } = {}) {
+export function speak(text, { rate = 1.0, pitch = 1.0 } = {}) {
   if (!voiceOutputSupported || !text) return Promise.resolve()
   window.speechSynthesis.cancel()
-  const utterance = new SpeechSynthesisUtterance(text)
-  utterance.rate = rate
-  utterance.pitch = pitch
-  utterance.lang = 'en-US'
-  utterance.voice = cachedVoice || (cachedVoice = pickVoice())
   return new Promise((resolve) => {
-    utterance.onend = resolve
-    utterance.onerror = resolve
-    window.speechSynthesis.speak(utterance)
+    // A short delay avoids a Chrome bug where cancel() + speak() too fast drops the utterance.
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.rate = rate
+      utterance.pitch = pitch
+      utterance.lang = 'en-US'
+      utterance.voice = cachedVoice || (cachedVoice = pickVoice())
+      utterance.onend = resolve
+      utterance.onerror = resolve
+      window.speechSynthesis.speak(utterance)
+    }, 50)
   })
 }
+
 
 /** Stop any reply currently being spoken (e.g. so the mic can hear you). */
 export function stopSpeaking() {

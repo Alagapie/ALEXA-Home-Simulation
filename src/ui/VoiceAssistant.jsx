@@ -21,7 +21,7 @@ import { ROOMS } from '../config/house'
  * saying "Hey Alexa".
  */
 
-const WAKE_WORDS = /^(?:hey |ok |okay |yo |hi )?alexa\b[,.!?…]?\s*/i
+const WAKE_WORDS = /^(?:hey |ok |okay |yo |hi |good morning |computer )?(?:alexa|computer)\b[,.!?…]?\s*/i
 
 const SUGGESTIONS = [
   'Movie mode', 'Good night', 'Turn off everything', "What's on?",
@@ -151,8 +151,20 @@ export function VoiceAssistant() {
         const stripped = t.replace(WAKE_WORDS, '')
         if (stripped.toLowerCase() !== t.toLowerCase()) {
           // "Hey Alexa ..." - the command may follow the wake word inline.
-          if (stripped.trim()) handleCommandRef.current?.(stripped.trim())
-          else { armUntilRef.current = Date.now() + 12000; speak(`Yes?`) }
+          if (stripped.trim()) {
+            handleCommandRef.current?.(stripped.trim())
+          } else {
+            // Wake word alone - respond then listen for command
+            armUntilRef.current = Date.now() + 12000
+            const wakeResponses = ["Yes?", "Go ahead.", "I'm listening.", "Yes, I'm here."]
+            const reply = wakeResponses[Math.floor(Math.random() * wakeResponses.length)]
+            wakeSuspendedRef.current = true
+            wakeRecRef.current?.stop()
+            speak(reply).then(() => {
+              wakeSuspendedRef.current = false
+              if (wakeWantedRef.current) wakeRecRef.current?.start()
+            })
+          }
         } else if (Date.now() < armUntilRef.current) {
           // Woken up already: the next sentence needs no wake word.
           armUntilRef.current = 0

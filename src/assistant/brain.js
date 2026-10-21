@@ -199,6 +199,10 @@ const MARKER_PATTERNS = [
   { re: /\bshut (?:it )?(down|off)\b/, map: () => 'off' },
   { re: /\bspin (?:it )?(up|down)\b/, map: (m) => (m[1] === 'up' ? 'on' : 'off') },
   { re: /\bturn (?:it )?(up|down)\b/, map: dirIntent },
+  { re: /\b(?:next|forward) channel\b/, map: () => 'up' },
+  { re: /\b(?:previous|prev|back) channel\b/, map: () => 'down' },
+  { re: /\bchannel (?:up|forward|next)\b/, map: () => 'up' },
+  { re: /\bchannel (?:down|back|previous|prev)\b/, map: () => 'down' },
   { re: /\b(unlock|lock|open|close|ring)\b/, map: (m) => m[1] },
   { re: /\b(mute|unmute)\b/, map: (m) => m[1] },
   { re: /\b(dim|darken|darker)\b/, map: () => 'down' },
@@ -336,6 +340,13 @@ function nudgeAction(device, dir, scope) {
       return { patch: { brightness, power: true }, command: 'light.set', say: `${Math.round(brightness * 100)}% bright` }
     }
     case 'tv': {
+      // "channel up / next channel / channel down / previous channel" nudges the channel;
+      // everything else nudges volume (the default behaviour).
+      const channelScope = has(scope, 'channel') || hasAny(scope, ['next channel', 'previous channel', 'channel up', 'channel down'])
+      if (channelScope) {
+        const channel = clamp((device.channel ?? 1) + step, 1, 99)
+        return { patch: { channel, power: true }, command: 'tv.set', say: `channel ${channel}` }
+      }
       const volume = clamp((device.volume ?? 20) + step * 10, 0, 100)
       return { patch: { volume, muted: false, power: true }, command: 'tv.set', say: `volume ${volume}%` }
     }
