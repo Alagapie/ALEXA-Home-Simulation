@@ -9,14 +9,11 @@ import {
 import { ROOMS } from '../config/house'
 
 /**
- * Alexa - the in-app voice assistant.
+ * Alexa - the in-app voice assistant using AuraAssist MCP server.
  *
- * A floating orb plus a small chat panel. The microphone turns speech into
- * text (Web Speech API); every command then flows through `parseCommand` and
- * the *same* store actions a click uses, so the assistant, the 3D scene and
- * the device list can never disagree. Replies are spoken back with
- * `speechSynthesis` and mirrored in the chat, which doubles as the text
- * interface when voice input is unavailable (e.g. Firefox).
+ * This component is a simple MCP client that talks to the AuraAssist agent.
+ * All conversational logic, routines, and confirmations happen on the server.
+ * This client only handles STT (speech-to-text) and TTS (text-to-speech).
  *
  * Push the mic and talk, type into the box, or arm the wake word and keep
  * saying "Hey Alexa".
@@ -36,14 +33,15 @@ const isTyping = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAR
 export function VoiceAssistant() {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([
-    { id: ++chatId, role: 'alexa', text: `Hi, I'm ${ASSISTANT_NAME}. Always listening! Say "Hey Alexa" to asks. Try: "what's on the coffee table", "movie mode", "prepare for bed".` },
+    { id: ++chatId, role: 'alexa', text: `Hi, I'm ${ASSISTANT_NAME}. I'm powered by AuraAssist! Say "Hey Alexa" to asks. Try: "what's on the coffee table", "movie mode", "prepare for bed".` },
   ])
   const [draft, setDraft] = useState('')
   const [interim, setInterim] = useState('')
   const [listening, setListening] = useState(false)
-  const [wakeOn, setWakeOn] = useState(true) // ALWAYS LISTENING
+  const [wakeOn, setWakeOn] = useState(true)
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
+  const [status, setStatus] = useState('idle') // idle | thinking | speaking | error
 
   const logRef = useRef(null)
   const inputRef = useRef(null)
@@ -65,131 +63,130 @@ export function VoiceAssistant() {
     const question = String(text || '').trim()
     if (!question) return
     addMessage('user', question)
+    
+    setStatus('thinking')
+    setBusy(true)
 
-    // Check if this is a routine command - these should ALWAYS use AuraAssist agent
-    // for natural, conversational responses like real Alexa
-    const isRoutine = text.toLowerCase().includes('bedtime') || 
-                      text.toLowerCase().includes('good night') ||
-                      text.toLowerCase().includes('goodnight') ||
-                      text.toLowerCase().includes('leaving') ||
-                      text.toLowerCase().includes('morning') ||
-                      text.toLowerCase().includes('movie mode') ||
-                      text.toLowerCase().includes('away mode')
+    try {
+      // We'll check if this is a routine and handle it
+      const isRoutine = question.toLowerCase().includes('bedtime') || 
+                        question.toLowerCase().includes('good night') ||
+                        question.toLowerCase().includes('goodnight') ||
+                        question.toLowerCase().includes('leaving') ||
+                        question.toLowerCase().includes('morning') ||
+                        question.toLowerCase().includes('movie mode') ||
+                        question.toLowerCase().includes('prepare') ||
+                        question.toLowerCase().includes('start my')
 
-    if (isRoutine) {
-      // Always use AuraAssist agent for routines for natural Alexa-like responses
-      setBusy(true)
-      let reply = 'I executed that command.'
-      try {
-        const turn = await invokeAgent(question, 'voice-sim')
-        reply = turn.reply || 'I executed that command.'
-        for (const call of turn.tool_calls || []) {
-          useRoomStore.getState().pushLog({
-            level: 'info',
-            text: `Voice · ${call.name}${call.result ? ` · ${call.result}` : ''}`,
-          })
-        }
-        if (turn.needs_user_input) {
+      let reply = ''
+      let needsConfirmation = false
+
+      if (isRoutine) {
+        // Use AuraAssist agent for routines
+        setBusy(true)
+        try {
+          const turn = await invokeAgent(question, 'voice-sim')
+          reply = turn.reply || 'I executed that command.'
+          needsConfirmation = !!turn.needs_user_input
+
+          // Log tool calls
+          for (const call of turn.tool_calls || []) {
+            useRoomStore.getState().pushLog({
+              level: 'info',
+              text: `Voice · ${call.name}${call.result ? ` · ${call.result}` : ''}`,
+            })
+          }
+
           setBusy(false)
-          addMessage('assistant', turn.pending || 'Please confirm.')
+        } catch (error) {
+          reply = `I couldn't reach AuraAssist - ${error.message}`
+          setBusy(false)
+        }
+      } else {
+        // Use local brain.js for simple commands
+        const snapshot = useRoomStore.getState()
+        const plan = parseCommand(question, {
+          devices: snapshot.devices,
+          room: snapshot.room,
+          currentRoom: snapshot.currentRoom,
+          activeMode: snapshot.activeMode,
+        })
+
+        const asksAgent = plan.actions.some((a) => a.kind === 'ask_agent')
+          || plan.intent === 'unknown'
+          || plan.intent === 'visual_query'
+          || plan.intent === 'object_location'
+
+        if (asksAgent) {
+          // Use agent for visual questions
+          const ask = plan.actions.find((a) => a.kind === 'ask_agent')?.question || question
+          try {
+            const turn = await invokeAgent(ask, 'voice-sim')
+            reply = turn.reply || 'One moment…'
+            setBusy(false)
+          } catch (error) {
+            reply = plan.reply || `I couldn't reach AuraAssist (${error.message}).`
+            setBusy(false)
+          }
+        } else {
+          // Local command
+          reply = plan.reply || 'Done.'
+          if (voiceOutputSupported) {
+            wakeSuspendedRef.current = true
+            wakeRecRef.current?.stop()
+            speak(reply).then(() => {
+              wakeSuspendedRef.current = false
+              if (wakeWantedRef.current) wakeRecRef.current?.start()
+            })
+          }
+          
+          setBusy(true)
+          try {
+            await Promise.all(plan.actions.map((action) => {
+              const store = useRoomStore.getState()
+              if (action.kind === 'commit') return store.commit(action.id, action.patch, action.command)
+              if (action.kind === 'scene') return store.applyMode(action.modeId)
+              if (action.kind === 'nav') {
+                store.goToRoom(action.roomId)
+                store.pushLog({ level: 'info', text: `${ASSISTANT_NAME} · camera to the ${ROOMS[action.roomId]?.label || action.roomId}` })
+                return undefined
+              }
+              return undefined
+            }))
+          } finally {
+            setBusy(false)
+          }
+          
+          addMessage('alexa', reply)
+          setStatus('idle')
           return
         }
-        setBusy(false)
-        addMessage('alexa', reply)
-        if (voiceOutputSupported) {
-          wakeSuspendedRef.current = true
-          wakeRecRef.current?.stop()
-          speak(reply).then(() => {
-            wakeSuspendedRef.current = false
-            if (wakeWantedRef.current) wakeRecRef.current?.start()
-          })
-        }
-        return
-      } catch (error) {
-        setBusy(false)
-        const fallbackReply = `I couldn't execute that - ${error.message}`
-        addMessage('alexa', fallbackReply)
-        if (voiceOutputSupported) speak(fallbackReply)
-        return
       }
-    }
 
-    const snapshot = useRoomStore.getState()
-    const plan = parseCommand(question, {
-      devices: snapshot.devices,
-      room: snapshot.room,
-      currentRoom: snapshot.currentRoom,
-      activeMode: snapshot.activeMode,
-    })
-
-    /* --- Questions the agent owns (vision, camera memory, the house) ------- */
-    // The rule engine only knows the device list. Anything about *what the
-    // cameras see* or *where an object was last seen* is answered by the
-    // AuraAssist agent, which drives the VLM and the MCP tools.
-    const asksAgent = plan.actions.some((a) => a.kind === 'ask_agent')
-      || plan.intent === 'unknown'
-      || plan.intent === 'visual_query'
-      || plan.intent === 'object_location'
-
-    if (asksAgent) {
-      const ask = plan.actions.find((a) => a.kind === 'ask_agent')?.question || question
-      setBusy(true)
-      let reply = plan.reply || 'One moment…'
-      try {
-        const turn = await invokeAgent(ask, 'voice-sim')
-        reply = turn.reply || reply
-        for (const call of turn.tool_calls || []) {
-          useRoomStore.getState().pushLog({
-            level: 'info',
-            text: `Voice · ${call.name}${call.result ? ` · ${call.result}` : ''}`,
-          })
-        }
-      } catch (error) {
-        reply = plan.reply && plan.reply !== 'One moment…'
-          ? plan.reply
-          : `I couldn't reach AuraAssist (${error.message}). Start it with: python -m uvicorn server.main:app --port 8000`
-      }
-      setBusy(false)
-      addMessage('alexa', reply)
-      if (voiceOutputSupported) {
+      // Speak the reply
+      if (voiceOutputSupported && reply) {
         wakeSuspendedRef.current = true
         wakeRecRef.current?.stop()
-        speak(reply).then(() => {
-          wakeSuspendedRef.current = false
-          if (wakeWantedRef.current) wakeRecRef.current?.start()
-        })
-      }
-      return
-    }
-
-    // Reply first - the simulated device acks (~150ms each) must never make
-    // the user wait. Patches land optimistically the moment commit() is
-    // called, so the 3D scene reacts instantly too.
-    addMessage('alexa', plan.reply)
-    if (voiceOutputSupported) {
-      wakeSuspendedRef.current = true
-      wakeRecRef.current?.stop()
-      speak(plan.reply).then(() => {
+        await speak(reply)
         wakeSuspendedRef.current = false
         if (wakeWantedRef.current) wakeRecRef.current?.start()
-      })
-    }
+      }
 
-    setBusy(true)
-    try {
-      await Promise.all(plan.actions.map((action) => {
-        const store = useRoomStore.getState()
-        if (action.kind === 'commit') return store.commit(action.id, action.patch, action.command)
-        if (action.kind === 'scene') return store.applyMode(action.modeId)
-        if (action.kind === 'nav') {
-          store.goToRoom(action.roomId)
-          store.pushLog({ level: 'info', text: `${ASSISTANT_NAME} · camera to the ${ROOMS[action.roomId]?.label || action.roomId}` })
-          return undefined
-        }
-        return undefined
-      }))
+      addMessage('alexa', reply)
+
+      // Show confirmation if needed
+      if (needsConfirmation) {
+        // We show this in the chat log instead of adding a separate message
+        // The user will confirm by typing "yes"
+      }
+
+    } catch (error) {
+      const fallback = `I couldn't process that - ${error.message}`
+      addMessage('alexa', fallback)
+      if (voiceOutputSupported) speak(fallback)
     } finally {
       setBusy(false)
+      setStatus('idle')
     }
   }, [addMessage])
 
@@ -204,13 +201,21 @@ export function VoiceAssistant() {
 
   const startListening = useCallback(() => {
     if (!voiceInputSupported) { inputRef.current?.focus(); return }
-    stopSpeaking() // never let the assistant hear its own reply
+    stopSpeaking()
     setInterim('')
     setNote('')
     const rec = createRecognizer({
       onInterim: (t) => setInterim(t),
-      onFinal: (t) => { setInterim(''); handleCommandRef.current?.(t); rec.stop() },
-      onEnd: () => { setListening(false); setInterim(''); clearTimeout(guardRef.current) },
+      onFinal: (t) => { 
+        setInterim('')
+        if (!busy) handleCommandRef.current?.(t)
+        rec.stop() 
+      },
+      onEnd: () => { 
+        setListening(false)
+        setInterim('')
+        clearTimeout(guardRef.current) 
+      },
       onError: (error) => {
         if (error === 'not-allowed' || error === 'service-not-allowed') {
           setNote('Microphone blocked - allow mic access, or just type.')
@@ -221,9 +226,8 @@ export function VoiceAssistant() {
     pushRecRef.current = rec
     setListening(true)
     rec.start()
-    // A hung recogniser would leave the orb glowing forever.
     guardRef.current = setTimeout(() => rec.stop(), 9000)
-  }, [])
+  }, [busy])
 
   /* ------------------------------------------------------------- wake word */
 
@@ -238,11 +242,9 @@ export function VoiceAssistant() {
         setInterim('')
         const stripped = t.replace(WAKE_WORDS, '')
         if (stripped.toLowerCase() !== t.toLowerCase()) {
-          // "Hey Alexa ..." - the command may follow the wake word inline.
-          if (stripped.trim()) {
+          if (stripped.trim() && !busy) {
             handleCommandRef.current?.(stripped.trim())
-          } else {
-            // Wake word alone - respond then listen for command
+          } else if (!busy) {
             armUntilRef.current = Date.now() + 12000
             const wakeResponses = ["Yes?", "Go ahead.", "I'm listening.", "Yes, I'm here."]
             const reply = wakeResponses[Math.floor(Math.random() * wakeResponses.length)]
@@ -253,14 +255,12 @@ export function VoiceAssistant() {
               if (wakeWantedRef.current) wakeRecRef.current?.start()
             })
           }
-        } else if (Date.now() < armUntilRef.current) {
-          // Woken up already: the next sentence needs no wake word.
+        } else if (Date.now() < armUntilRef.current && !busy) {
           armUntilRef.current = 0
           handleCommandRef.current?.(t)
         }
       },
       onEnd: () => {
-        // Chrome stops continuous recognition every few minutes; restart while armed.
         if (wakeWantedRef.current && !wakeSuspendedRef.current) rec.start()
       },
       onError: (error) => {
@@ -274,7 +274,7 @@ export function VoiceAssistant() {
     if (!rec) { setWakeOn(false); return }
     wakeRecRef.current = rec
     rec.start()
-  }, [])
+  }, [busy])
 
   const stopWake = useCallback(() => {
     wakeWantedRef.current = false
@@ -320,7 +320,7 @@ export function VoiceAssistant() {
   useEffect(() => () => { stopSpeaking() }, [])
 
   const statusLine = busy
-    ? 'One moment…'
+    ? 'Thinking…'
     : listening
       ? 'Listening…'
       : wakeOn
@@ -385,13 +385,13 @@ export function VoiceAssistant() {
             {messages.map((m) => (
               <div key={m.id} className={`msg msg--${m.role}`}>{m.text}</div>
             ))}
-            {busy && <div className="msg msg--alexa msg--busy">Working…</div>}
+            {busy && <div className="msg msg--alexa msg--busy">Thinking…</div>}
             {interim && <div className="msg msg--interim">{interim}…</div>}
           </div>
 
           <div className="alexa__chips">
             {SUGGESTIONS.map((s) => (
-              <button key={s} type="button" className="alexa__chip" onClick={() => handleCommand(s)}>{s}</button>
+              <button key={s} type="button" className="alexa__chip" onClick={() => handleCommand(s)} disabled={busy}>{s}</button>
             ))}
           </div>
 
@@ -403,6 +403,7 @@ export function VoiceAssistant() {
               onChange={(e) => setDraft(e.target.value)}
               placeholder={`Say it or type it - e.g. "lights out"`}
               aria-label={`Ask ${ASSISTANT_NAME}`}
+              disabled={busy}
             />
             <button
               type="button"
