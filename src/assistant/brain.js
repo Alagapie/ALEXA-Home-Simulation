@@ -642,7 +642,9 @@ export function parseCommand(rawText, state = {}) {
       if (!hasAny(text, words)) continue
       const mode = MODE_LIST.find((m) => m.id === modeId)
       if (!mode) continue
-      return plan(`${mode.label} on.`, 'scene', [{ kind: 'scene', modeId }])
+      // More Alexa-like response
+      const action = modeId === 'away' ? 'starting' : modeId === 'movie' ? 'activating' : 'executing'
+      return plan(`${mode.label} ${action}.`, 'scene', [{ kind: 'scene', modeId }])
     }
   }
 
@@ -761,14 +763,15 @@ export function parseCommand(rawText, state = {}) {
 }
 
 /**
- * Keep spoken replies short. One device gets named, a couple get listed, and
- * anything bigger collapses into a count - the chat log has the full detail.
+ * Keep spoken replies short and natural like Alexa.
+ * One device gets named, a couple get listed, and anything bigger collapses into a count.
+ * The chat log has the full detail.
  */
 function summarise(said, count) {
-  if (!said.length) return 'Done.'
+  if (!said.length) return 'Okay, got it.'
   if (said.length === 1) return `Okay, ${said[0]}.`
   if (said.length <= 3) return `Okay, ${said.join(', ')}.`
   const off = said.filter((s) => /\bis off\b|\bare closed\b/.test(s)).length
-  if (off === said.length) return `Okay, all ${count} are off.`
-  return `Okay, done with ${count} devices.`
+  if (off === said.length) return `Okay, all ${count} are off now.`
+  return `Okay, I've made ${count} changes for you.`
 }

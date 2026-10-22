@@ -66,6 +66,54 @@ export function VoiceAssistant() {
     if (!question) return
     addMessage('user', question)
 
+    // Check if this is a routine command - these should ALWAYS use AuraAssist agent
+    // for natural, conversational responses like real Alexa
+    const isRoutine = text.toLowerCase().includes('bedtime') || 
+                      text.toLowerCase().includes('good night') ||
+                      text.toLowerCase().includes('goodnight') ||
+                      text.toLowerCase().includes('leaving') ||
+                      text.toLowerCase().includes('morning') ||
+                      text.toLowerCase().includes('movie mode') ||
+                      text.toLowerCase().includes('away mode')
+
+    if (isRoutine) {
+      // Always use AuraAssist agent for routines for natural Alexa-like responses
+      setBusy(true)
+      let reply = 'I executed that command.'
+      try {
+        const turn = await invokeAgent(question, 'voice-sim')
+        reply = turn.reply || 'I executed that command.'
+        for (const call of turn.tool_calls || []) {
+          useRoomStore.getState().pushLog({
+            level: 'info',
+            text: `Voice · ${call.name}${call.result ? ` · ${call.result}` : ''}`,
+          })
+        }
+        if (turn.needs_user_input) {
+          setBusy(false)
+          addMessage('assistant', turn.pending || 'Please confirm.')
+          return
+        }
+        setBusy(false)
+        addMessage('alexa', reply)
+        if (voiceOutputSupported) {
+          wakeSuspendedRef.current = true
+          wakeRecRef.current?.stop()
+          speak(reply).then(() => {
+            wakeSuspendedRef.current = false
+            if (wakeWantedRef.current) wakeRecRef.current?.start()
+          })
+        }
+        return
+      } catch (error) {
+        setBusy(false)
+        const fallbackReply = `I couldn't execute that - ${error.message}`
+        addMessage('alexa', fallbackReply)
+        if (voiceOutputSupported) speak(fallbackReply)
+        return
+      }
+    }
+
     const snapshot = useRoomStore.getState()
     const plan = parseCommand(question, {
       devices: snapshot.devices,
