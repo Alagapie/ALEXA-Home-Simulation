@@ -33,7 +33,7 @@ const isTyping = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAR
 export function VoiceAssistant() {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([
-    { id: ++chatId, role: 'alexa', text: `Hi, I'm ${ASSISTANT_NAME}. I'm powered by AuraAssist! Say "Hey Alexa" to asks. Try: "what's on the coffee table", "movie mode", "prepare for bed".` },
+    { id: ++chatId, role: 'alexa', text: `Hi! I'm AuraAssist, your context-aware home companion. You can ask about your surroundings, control your home, or start a routine. What would you like to do? Try: \"movie mode\", \"good night\", \"what's on?\"` },
   ])
   const [draft, setDraft] = useState('')
   const [interim, setInterim] = useState('')
