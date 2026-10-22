@@ -345,12 +345,13 @@ export function VoiceAssistant() {
     
     // Handle confirmation
     if (pendingRoutine) {
-      if (text.toLowerCase() === 'yes' || text.toLowerCase() === 'proceed' || text.toLowerCase() === 'okay') {
-        setDraft('')
-        // Execute the pending routine
-        handleCommand(text)
-        return
-      }
+      setDraft('')
+      // Execute the pending routine with explicit yes
+      const approvedText = `yes, ${pendingRoutine}`
+      setPendingRoutine(null)
+      setPendingActions([])
+      handleCommand(approvedText)
+      return
     }
     
     setDraft('')
@@ -423,7 +424,12 @@ export function VoiceAssistant() {
                   )}
                 </div>
                 <div className="aura__pending-actions">
-                  <button type="button" onClick={() => handleCommand('yes')}>Yes, proceed</button>
+                  <button type="button" onClick={() => {
+                    // When user clicks YES, we just submit with empty draft
+                    // which triggers the submit handler with pending info
+                    document.querySelector('.alexa__input')?.focus()
+                    document.querySelector('.alexa__form')?.requestSubmit()
+                  }}>Yes, proceed</button>
                   <button type="button" onClick={() => {
                     setPendingRoutine(null)
                     setPendingActions([])
