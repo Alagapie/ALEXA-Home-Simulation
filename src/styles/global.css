@@ -657,6 +657,46 @@ kbd { background: rgba(255,255,255,0.09); border: 1px solid var(--border); borde
 .aura__confirm-text { font-size: 11.5px; color: #fde68a; font-weight: 600; }
 .aura__confirm-actions { display: flex; gap: 6px; }
 
+/* Pending routine action list display */
+.aura__pending {
+  display: flex; flex-direction: column; gap: 8px; padding: 12px;
+  border-radius: 11px; border: 1px solid rgba(167, 139, 250, 0.5);
+  background: rgba(139, 92, 246, 0.1);
+}
+.aura__pending-header { 
+  font-size: 12.5px; font-weight: 700; color: #d5c9f0;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.aura__pending-actions {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 160px; overflow-y: auto;
+}
+.aura__pending-action { 
+  font-size: 11.5px; color: #e9e0ff; padding: 3px 8px;
+  border-radius: 6px; background: rgba(255,255,255,0.04);
+}
+.aura__pending-more { 
+  font-size: 10.5px; color: #a78bfa; font-style: italic; padding: 4px 8px;
+}
+.aura__pending-actions { display: flex; gap: 6px; }
+.aura__pending-actions button {
+  cursor: pointer; font-size: 10px; font-weight: 700;
+  padding: 6px 12px; border-radius: 8px; border: none;
+  transition: all 0.16s ease;
+}
+.aura__pending-actions button:first-child {
+  color: #150a2e; background: #bbf7d0;
+}
+.aura__pending-actions button:first-child:hover {
+  background: #86efac;
+}
+.aura__pending-actions button:last-child {
+  color: #150a2e; background: #fecaca;
+}
+.aura__pending-actions button:last-child:hover {
+  background: #fca5a5;
+}
+
 .aura__btn {
   cursor: pointer; font-size: 10.5px; font-weight: 640; color: #d6c9ff;
   display: inline-flex; align-items: center; gap: 4px;

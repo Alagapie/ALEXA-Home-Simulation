@@ -41,7 +41,9 @@ export function VoiceAssistant() {
   const [wakeOn, setWakeOn] = useState(true)
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
-  const [status, setStatus] = useState('idle') // idle | thinking | speaking | error
+  const [status, setStatus] = useState('idle')
+  const [pendingRoutine, setPendingRoutine] = useState(null)
+  const [pendingActions, setPendingActions] = useState([])
 
   const logRef = useRef(null)
   const inputRef = useRef(null)
@@ -88,6 +90,15 @@ export function VoiceAssistant() {
           const turn = await invokeAgent(question, 'voice-sim')
           reply = turn.reply || 'I executed that command.'
           needsConfirmation = !!turn.needs_user_input
+          
+          // Store pending routine for action list display
+          if (needsConfirmation) {
+            setPendingRoutine(question)
+            setPendingActions(turn.actions || [])
+          } else {
+            setPendingRoutine(null)
+            setPendingActions([])
+          }
 
           // Log tool calls
           for (const call of turn.tool_calls || []) {
@@ -331,6 +342,17 @@ export function VoiceAssistant() {
     event.preventDefault()
     const text = draft.trim()
     if (!text) return
+    
+    // Handle confirmation
+    if (pendingRoutine) {
+      if (text.toLowerCase() === 'yes' || text.toLowerCase() === 'proceed' || text.toLowerCase() === 'okay') {
+        setDraft('')
+        // Execute the pending routine
+        handleCommand(text)
+        return
+      }
+    }
+    
     setDraft('')
     handleCommand(text)
   }
@@ -387,6 +409,29 @@ export function VoiceAssistant() {
             ))}
             {busy && <div className="msg msg--alexa msg--busy">Thinking…</div>}
             {interim && <div className="msg msg--interim">{interim}…</div>}
+            
+            {/* Show pending routine confirmation with action list */}
+            {pendingRoutine && pendingActions.length > 0 && (
+              <div className="msg msg--alexa msg--pending aura__pending">
+                <div className="aura__pending-header">Ready to execute</div>
+                <div className="aura__pending-actions">
+                  {pendingActions.slice(0, 6).map((action, idx) => (
+                    <div key={idx} className="aura__pending-action">{action.description}</div>
+                  ))}
+                  {pendingActions.length > 6 && (
+                    <div className="aura__pending-more">+ {pendingActions.length - 6} more</div>
+                  )}
+                </div>
+                <div className="aura__pending-actions">
+                  <button type="button" onClick={() => handleCommand('yes')}>Yes, proceed</button>
+                  <button type="button" onClick={() => {
+                    setPendingRoutine(null)
+                    setPendingActions([])
+                    addMessage('alexa', 'Cancelled - nothing was changed.')
+                  }}>Cancel</button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="alexa__chips">
