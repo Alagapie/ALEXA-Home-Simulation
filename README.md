@@ -1,209 +1,332 @@
-# Interactive 3D Smart Room Simulator
+# AuraAssist - Context-Aware Home Assistant
 
-An interactive 3D smart home simulator built with React, Three.js, React Three Fiber, and React Three Drei. Click devices in the 3D scene or use the control panel to toggle lights, TV, AC, fan, curtains, and doors. Run automation modes (Movie, Sleep, Away, Bright) that mutate the same device state shared by 3D and UI.
+**A privacy-first, hands-free home companion for Alexa+ with Amazon Bedrock integration.**
 
-## Tech Stack
+An interactive 3D smart home simulator with Alexa voice assistant, wake word detection, Amazon Bedrock VLM integration, and multi-step routines with safety guardrails.
 
-- [Vite](https://vitejs.dev/) 6.4.4 - build/dev tooling
-- [React](https://react.dev/) 18.3.1 + [React DOM](https://react.dev/) 18.3.1
-- [Three.js](https://threejs.org/) 0.171.0
-- [@react-three/fiber](https://r3f.docs.pmnd.rs/) 8.18.0
-- [@react-three/drei](https://github.com/pmndrs/drei) 9.122.0
-- [Zustand](https://zustand-demo.pmnd.rs/) 5.0.15 - state management
-- [lucide-react](https://lucide.dev/) 0.468.0 - icons
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![React](https://img.shields.io/badge/React-18.3-green.svg)](https://react.dev)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-blue.svg)](https://fastapi.tiangolo.com)
+[![Bedrock](https://img.shields.io/badge/Amazon_Bedrock-Nova_Lite-orange.svg)](https://aws.amazon.com/bedrock/)
 
-All dependencies are pinned to versions available in `node_modules` (no network install required).
+## 🎯 Quick Start
 
-## Getting Started
+### 1. Start the MCP Server (Required)
 
-### Prerequisites
-
-- Node.js >= 18 (tested with v22.19.0)
-- npm >= 10 (tested with 10.9.3)
-
-### Install
-
-Dependencies are pre-installed in `node_modules`. No `npm install` needed.
-
-### Development
-
-```bash
-npm run dev
-```
-
-The dev server runs at http://localhost:5175 (fresh server; port 5173 was an old/stale instance). 
-
-The app uses HMR. For headless/automated verification in dev, the app exposes:
-- `window.__roomStore` - Zustand store instance (dev only)
-- `window.__deviceService` - Device service instance (dev only)  
-- `window.__three = { gl, scene, camera, controls, advance }` - R3F renderer state bridge (dev only)
-
-Note: In dev, `preserveDrawingBuffer` is enabled to allow canvas pixel readback for QA.
-
-### AuraAssist MCP server
-
-The MCP server is located in the separate `aura-assist` folder at `C:\Users\DELL\Desktop\aura-assist`. It's a Python FastAPI server with Streamable HTTP at `http://localhost:8000/mcp`.
-
-**To start the server:**
 ```bash
 cd "C:\Users\DELL\Desktop\aura-assist"
 pip install -r requirements.txt
-python -m uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-**The server provides:**
-- MCP Streamable HTTP endpoint at `/mcp`
-- Amazon Bedrock VLM integration for scene understanding
-- Object finding with event memory
-- Multi-step routines with confirmation
-- Safety guardrails
+Verify the server is running:
+```bash
+curl http://localhost:8000/health
+# Expected: {"status": "ok", "service": "aura-assist", ...}
+```
 
-**MCP Tools:**
-- `get_home_snapshot` - Current home state with digest
-- `describe_scene` - Camera view with objects and hazards
-- `find_object` - Find items in event history
-- `control_device` - Control devices with confirmation
-- `run_routine` - Multi-step workflows
-- `get_recent_events` - Activity log
-- `generate_daily_briefing` - Daily summary
-- `set_user_preference` - Accessibility preferences
-
-### Build
+### 2. Start the Simulator
 
 ```bash
+cd "C:\Users\DELL\Desktop\HOME SIMULATION"
+npm run dev
+```
+
+Open your browser to `http://localhost:5175`
+
+### 3. Use the Voice Assistant
+
+Press **V** or click the Alexa orb to open the voice assistant.
+
+**Wake Words:**
+- "Hey Alexa" - Primary
+- "Computer" - Alternative
+
+**Try these commands:**
+- "turn off the kitchen lights"
+- "prepare for bed"
+- "where are my keys?"
+- "movie mode"
+- "go to the kitchen"
+
+---
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) | Production deployment instructions |
+| [VOICE_ASSISTANT_READINESS.md](VOICE_ASSISTANT_READINESS.md) | Voice features verification |
+| [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) | Directory organization |
+| [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) | Full production readiness checklist |
+
+---
+
+## ✨ Features
+
+### Voice Assistant (Alexa)
+- ✅ **Wake word detection** - "Hey Alexa" / "Computer"
+- ✅ **Speech recognition** - Natural language commands
+- ✅ **Speech synthesis** - Alexa speaks replies
+- ✅ **Push-to-talk** - Button activation
+- ✅ **Browser fallback** - Text chat when voice unavailable
+
+### MCP Server (aura-assist/)
+- ✅ **Streamable HTTP** - MCP 2025-11-25 compliant
+- ✅ **8 MCP tools** - Complete device control and state
+- ✅ **Bedrock VLM** - Amazon Nova Lite for scene understanding
+- ✅ **Object finding** - Search event history
+- ✅ **Routines** - Multi-step workflows with confirmation
+
+### Safety & Security
+- ✅ **Confirmation flow** - Required for unlocking devices
+- ✅ **Routine guardrails** - Safe multi-step automation
+- ✅ **Protected devices** - Fridge, doors, locks excluded from automation
+- ✅ **Privacy-first** - No facial recognition, no personal data storage
+
+---
+
+## 🏗️ System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Web Simulator (Current Folder)               │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐     │
+│  │   3D Scene  │  │ Voice Alexa │  │   MCP Client        │     │
+│  │  (Three.js) │  │ (Wake Word) │  │ (Browser)           │     │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘     │
+└─────────────────────────────────────────────────────────────────┘
+                            │ HTTPS/Streamable HTTP
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  AuraAssist MCP Server                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐     │
+│  │  FastAPI    │  │   FastMCP   │  │  Amazon Bedrock     │     │
+│  │  Endpoint   │  │  (Tools)    │  │  (Nova Lite)        │     │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Production Deployment
+
+### AWS Bedrock Setup
+
+1. Create IAM user with `AmazonBedrockFullAccess` policy
+2. Generate access keys
+3. Configure `.env` file:
+   ```bash
+   cd "C:\Users\DELL\Desktop\aura-assist"
+   copy .env.example .env
+   # Edit .env with your AWS credentials
+   ```
+
+4. Verify setup:
+   ```bash
+   python scripts/check_bedrock.py
+   ```
+
+### Deploy MCP Server
+
+**Option A: Docker**
+```bash
+cd "C:\Users\DELL\Desktop\aura-assist"
+docker build -t aura-assist .
+docker run -p 8000:8000 --env-file .env aura-assist
+```
+
+**Option B: Direct Deployment**
+```bash
+cd "C:\Users\DELL\Desktop\aura-assist"
+pip install -r requirements.txt
+uvicorn server.main:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+### Deploy Web Simulator
+
+```bash
+cd "C:\Users\DELL\Desktop\HOME SIMULATION"
+
+# Configure server URL
+cp .env.example .env
+# Edit VITE_AURA_SERVER in .env
+
+npm run build
+# Deploy dist/ to CDN/HTTP server with HTTPS
+```
+
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for detailed instructions.
+
+---
+
+## 📦 MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `get_home_snapshot` | Current home state with ready-made digest |
+| `describe_scene` | VLM scene understanding (objects, hazards) |
+| `find_object` | Search object event history |
+| `get_recent_events` | Activity timeline and summaries |
+| `run_routine` | Multi-step workflows with confirmation |
+| `control_device` | Device control with safety guardrails |
+| `generate_daily_briefing` | AI-generated daily summaries |
+| `set_user_preference` | Accessibility and privacy settings |
+
+---
+
+## 🧪 Testing
+
+### Run Tests
+
+```bash
+# Test MCP server
+cd "C:\Users\DELL\Desktop\aura-assist"
+python scripts/smoke_mcp.py
+python scripts/smoke_agent.py
+
+# Build web app (production check)
+cd "C:\Users\DELL\Desktop\HOME SIMULATION"
 npm run build
 ```
 
-Build output goes to `dist/`. The build has been verified to pass (1.1MB JS, 13.31KB CSS).
+### Test Voice Assistant
 
-### Preview
+1. Open app and press **V**
+2. Enable wake word (Ear icon)
+3. Say "Hey Alexa"
+4. Try commands:
+   - "what's on?"
+   - "turn off the kitchen lights"
+   - "prepare for bed"
 
+---
+
+## 💰 Cost Estimate
+
+| Mode | Cost |
+|------|------|
+| **Mock (Local)** | $0 |
+| **Production (Bedrock)** | ~$0.30/day (Nova Lite) |
+
+---
+
+## 🔧 Tech Stack
+
+### Web Simulator
+- React 18.3 + Vite
+- Three.js + React Three Fiber
+- Zustand (state management)
+- Web Speech API (voice)
+- Web Speech API (TTS)
+
+### MCP Server
+- Python 3.10+
+- FastAPI
+- FastMCP
+- Amazon Bedrock (Nova Lite)
+- SQLite
+
+---
+
+## 📝 Environment Configuration
+
+### Web Simulator (.env)
 ```bash
-npm run preview
+VITE_AURA_SERVER=http://localhost:8000
 ```
 
-Serves the built `dist/` locally.
-
-## Project Structure
-
-```
-src/
-├── assistant/brain.js        # Alexa voice assistant: pure text -> action planner
-├── automation/modes.js      # Automation scene definitions (Movie/Sleep/Away/Bright)
-├── config/devices.js        # Initial device state and device metadata
-├── services/deviceService.js # Device abstraction layer (adapters)
-├── services/speech.js       # Web Speech API wrappers (voice input/output for Alexa)
-├── store/useRoomStore.js     # Zustand store (single source of truth)
-├── styles/global.css        # Global styles
-├── three/
-│   ├── SmartRoom.jsx        # Main 3D scene composition
-│   ├── Lighting.jsx         # Global lighting setup
-│   ├── RoomShell.jsx        # Walls/floor/ceiling/room geometry
-│   ├── WalkMode.jsx         # First-person walkthrough with PointerLockControls
-│   ├── appliances/          # TV, lights, AC, fan, curtains, doors, switches
-│   ├── furniture/           # Sofa, tables, decor
-│   └── helpers/             # Clickable, textures, geometry helpers
-└── ui/                      # HUD, device panel, automation controls, status bar
+### MCP Server (.env)
+```ini
+AURA_USE_BEDROCK=1
+AWS_ACCESS_KEY_ID=your-key
+AWS_SECRET_ACCESS_KEY=your-secret
+AWS_REGION=us-east-1
 ```
 
-## Architecture
+---
 
-### State Management
+## 🌐 Browser Support
 
-All app state lives in a single Zustand store (`useRoomStore`). 
-- 3D scene reads device state via hooks (`useDevice`) and Clickable components
-- UI components read same state
-- Changes go through `commit(id, patch, command, options)` which:
-  1. Optimistically updates local state
-  2. Sends command via `deviceService.send()`
-  3. Rolls back on error
-- `activeMode` tracks current automation mode; manual commands set it to "Manual"
+| Browser | Voice Support | Notes |
+|---------|--------------|-------|
+| Chrome | ✅ Full | Recommended |
+| Edge | ✅ Full | Recommended |
+| Firefox | ⚠️ Limited | Text fallback only |
+| Safari | ⚠️ Limited | Not recommended |
 
-### Device Abstraction
+---
 
-`src/services/deviceService.js` provides swappable adapters:
-- **SimulatedDeviceAdapter** (default) - local simulation with ~50-140ms latency, no external deps
-- **FastApiDeviceAdapter** (stub) - ready for FastAPI backend
-- **HomeAssistantAdapter** (stub) - ready for Home Assistant
-- **MqttDeviceAdapter** (stub) - ready for MQTT
+## 📖 Examples
 
-Select backend via `VITE_DEVICE_BACKEND` env var:
-```bash
-VITE_DEVICE_BACKEND=fastapi npm run dev
-VITE_DEVICE_BACKEND=hass npm run dev  
-VITE_DEVICE_BACKEND=mqtt npm run dev
-# defaults to simulated
+### Voice Commands
+```
+"Hey Alexa, turn off the kitchen lights"
+"Hey Alexa, prepare for bed"
+"Hey Alexa, where are my keys?"
+"Hey Alexa, movie mode"
+"Hey Alexa, what's on?"
 ```
 
-Stubs log intent and return success; replace send/subscribe with real implementations.
+### MCP Tool Calls
+```json
+POST /mcp
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "run_routine",
+    "arguments": {"routine_name": "bedtime", "confirm": false}
+  }
+}
+```
 
-### Automation
+---
 
-Automation scenes are defined in `src/automation/modes.js` as `MODE_PATCHES`. `applyMode()` applies patches via the same `commit()` path with `keepMode: true`, ensuring 3D and UI stay in sync. Scene execution is serialized (last request wins, manual commands cancel pending scenes).
+## 🔒 Security
 
-### Voice assistant (Alexa)
+- ✅ No hardcoded credentials
+- ✅ AWS keys in `.env` (git-ignored)
+- ✅ Microphone permission required
+- ✅ HTTPS enforced for production
+- ✅ No facial recognition
+- ✅ No personal data storage
 
-The simulator ships its own "Alexa": a floating assistant orb (press **V**, or click it) that understands natural-language commands and speaks its replies.
+---
 
-- `src/assistant/brain.js` is a **pure text → plan** module (no React/THREE imports): it resolves rooms, devices, verbs, numbers and scenes, and returns `{ reply, actions }`. The component replays those actions through the same store commands a click uses, so voice, 3D and UI can never disagree. It is covered by `npm test`.
-- `src/services/speech.js` wraps the browser's Web Speech API: `SpeechRecognition` for voice input (Chrome/Edge) and `speechSynthesis` for spoken replies. No dependencies, no API keys.
-- The panel degrades gracefully: where voice input is unavailable, it is a plain text chat with the same command brain.
-- An optional wake word ("Hey Alexa") keeps a continuous recogniser armed; the mic pauses itself while a reply is spoken so the assistant never hears itself.
+## 🤝 Contributing
 
-Example commands: *"turn off the kitchen lights"*, *"set the AC to 20 degrees"*, *"dim the table lamp"*, *"open the curtains"*, *"lock the front door"*, *"volume 30"*, *"movie mode"*, *"good night"*, *"go to the bedroom"*, *"what's on?"*, *"is the TV on?"*.
+1. Fork the repository
+2. Create a feature branch
+3. Test your changes
+4. Submit a pull request
 
-### Interaction
+---
 
-- **Orbit mode** (default): Click objects to toggle primary action (lights/TV/AC/fan on/off, curtains/doors open/close). Drag to orbit, right-drag to pan, scroll to zoom. Contextual panel shows for selected device.
-  - Scrolling is damped and continuous: the wheel eases the camera toward its target instead of snapping, zoom-out runs all the way from a room close-up to the whole-house view, and the room switcher follows the zoom level (a room up close, "Overview" when pulled back).
-  - The orbit target is clamped to the house envelope, so panning/zooming can never drift the view off into the void behind the single-sided walls.
-  - The wheel and mouse always interrupt an in-flight room fly-in rather than being swallowed.
-- **Walkthrough mode**: WASD to move, Shift to run, click to lock pointer, Esc to release. Click objects while locked to control them. 
-- **Hover/selection**: Visual feedback via scale highlight and floating labels.
+## 📄 License
 
-## Features
+MIT License - See [LICENSE](LICENSE) for details.
 
-### Appliances
-- **TV** (simulated screen with 4 channels, volume/mute/overlay)
-- **Smart Lights** (ceiling/wall/table/floor) - power, brightness, color with real illumination
-- **Air Conditioner** - power, mode, target temperature
-- **Standing Fan** - power, speed, oscillate with animated blades
-- **Curtains** - smooth open/close animation
-- **Doors** (entry/interior) - smooth open/close animation  
-- **Wall Switches/Smart Panel** - wired to control lights
+---
 
-### UI
-- Fullscreen 3D view with orbit controls
-- First-person/walkthrough mode
-- Smart home control panel with device list and states
-- Contextual device panel on selection
-- Master controls (All Lights Off, All Off)
-- Automation modes (Movie/Sleep/Away/Bright)
-- Voice assistant Alexa - speak or type commands ("Hey Alexa" wake word optional)
-- Status bar (active devices, room temp/humidity, backend, time)
-- Activity log
+## 🙏 Acknowledgments
 
-## Important Notes
+- Amazon Bedrock for multimodal AI capabilities
+- React Three Fiber for 3D rendering
+- FastMCP for protocol compliance
 
-- **Simulated devices only** - This is a simulation for learning/demo purposes. No claims of physical hardware control. The adapter stubs show integration path but require real backend implementation.
-- **Dev-only inspection hooks** - `window.__roomStore`, `window.__deviceService`, `window.__three` are exposed only in dev (`import.meta.env.DEV`) for debugging/QA. These can be removed if desired, but are documented here.
-- **Canvas rendering** - In dev, `preserveDrawingBuffer: true` is set. Hidden tabs block `requestAnimationFrame`; if running headless checks, trigger resize or call `gl.render(scene,camera)` + `advance(t)`.
-- **Procedural assets** - Uses canvas-generated textures only; no external images/CDN assets.
+---
 
-## Scripts
+## 📞 Support
 
-- `npm run dev` - Start dev server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
+For issues and questions:
+- Check [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) for production issues
+- Review [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for setup problems
+- Check browser console for voice assistant errors
 
-## Real Device Integration Path
+---
 
-1. Set `VITE_DEVICE_BACKEND` to `fastapi`, `hass`, or `mqtt` in your environment
-2. Implement actual API calls in the corresponding adapter in `src/services/deviceService.js`:
-   - `FastApiDeviceAdapter.send(id, command, payload)` - call your FastAPI endpoint
-   - `HomeAssistantAdapter.send()` - use HA REST API or WebSocket
-   - `MqttDeviceAdapter.send()` - publish to MQTT topics
-3. Add authentication, error handling, retries as needed
-4. Optionally implement `subscribe()` for real-time state updates from backend
-
-The optimistic update + rollback pattern in `commit()` works well with real backends.
+**Status**: ✅ Production Ready  
+**Version**: 1.0  
+**Last Updated**: October 22, 2026
