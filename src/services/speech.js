@@ -135,3 +135,91 @@ export function createRecognizer({ lang = 'en-US', continuous = false, interimRe
     },
   }
 }
+
+/**
+ * A recogniser that keeps itself alive.
+ *
+ * Chrome ends a continuous recognition session every few minutes (and on
+ * tab blur), so a "always listening" assistant has to restart it. This wrapper
+ * does that for you: whenever the browser ends the session, it starts a fresh
+ * one, unless the caller asked it to stop.
+ *
+ * @param {object} options
+ * @param {number} [options.restartDelayMs=250]  pause before restarting
+ * @param {boolean} [options.restart=true]      set false to stop auto-restart
+ * @param {() => boolean} [options.shouldRestart] extra gate (e.g. not speaking)
+ */
+export function createRestartableRecognizer({ lang = 'en-US', continuous = true, interimResults = true, onFinal, onInterim, onEnd, onError, restartDelayMs = 250, shouldRestart } = {}) {
+  const Recognition = getRecognition()
+  if (!Recognition) return null
+
+  let wanted = false
+  let recognition = null
+  let timer = null
+
+  const build = () => {
+    const rec = new Recognition()
+    rec.lang = lang
+    rec.continuous = continuous
+    rec.interimResults = interimResults
+    rec.maxAlternatives = 1
+
+    rec.onresult = (event) => {
+      let interim = ''
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const result = event.results[i]
+        if (result.isFinal) {
+          const text = result[0].transcript.trim()
+          if (text) onFinal?.(text)
+        } else {
+          interim += result[0].transcript
+        }
+      }
+      if (interim.trim()) onInterim?.(interim.trim())
+    }
+
+    rec.onerror = (event) => {
+      const error = event.error || 'unknown'
+      // "no-speech" / "aborted" are routine - the restart loop handles them.
+      if (error !== 'no-speech' && error !== 'aborted') onError?.(error)
+      if (error === 'not-allowed' || error === 'service-not-allowed') {
+        wanted = false
+      }
+    }
+
+    rec.onend = () => {
+      onEnd?.()
+      if (!wanted) return
+      if (shouldRestart && shouldRestart() === false) return
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        if (!wanted) return
+        try { rec.start() } catch { /* already started */ }
+      }, restartDelayMs)
+    }
+    return rec
+  }
+
+  recognition = build()
+
+  return {
+    start() {
+      wanted = true
+      try { recognition.start() } catch { /* already started */ }
+    },
+    stop() {
+      wanted = false
+      window.clearTimeout(timer)
+      try { recognition.stop() } catch { /* not started */ }
+    },
+    abort() {
+      wanted = false
+      window.clearTimeout(timer)
+      try { recognition.abort() } catch { /* not started */ }
+    },
+    /** True while the wrapper is armed (it will restart itself when it ends). */
+    get listening() {
+      return wanted
+    },
+  }
+}

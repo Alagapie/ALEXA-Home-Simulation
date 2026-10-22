@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Ear, Mic, MicOff, Send, Sparkles, X } from 'lucide-react'
 import { useRoomStore } from '../store/useRoomStore'
 import { parseCommand, ASSISTANT_NAME } from '../assistant/brain'
+import { invokeAgent } from '../services/auraApi'
 import {
   createRecognizer, speak, stopSpeaking, voiceInputSupported, voiceOutputSupported,
 } from '../services/speech'
@@ -35,12 +36,12 @@ const isTyping = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAR
 export function VoiceAssistant() {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([
-    { id: ++chatId, role: 'alexa', text: `Hi, I'm ${ASSISTANT_NAME}. Ask me to control anything - "turn off the kitchen light", "movie mode", "what's on?"` },
+    { id: ++chatId, role: 'alexa', text: `Hi, I'm ${ASSISTANT_NAME}. Always listening! Say "Hey Alexa" to asks. Try: "what's on the coffee table", "movie mode", "prepare for bed".` },
   ])
   const [draft, setDraft] = useState('')
   const [interim, setInterim] = useState('')
   const [listening, setListening] = useState(false)
-  const [wakeOn, setWakeOn] = useState(false)
+  const [wakeOn, setWakeOn] = useState(true) // ALWAYS LISTENING
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
 
@@ -73,6 +74,46 @@ export function VoiceAssistant() {
       activeMode: snapshot.activeMode,
     })
 
+    /* --- Questions the agent owns (vision, camera memory, the house) ------- */
+    // The rule engine only knows the device list. Anything about *what the
+    // cameras see* or *where an object was last seen* is answered by the
+    // AuraAssist agent, which drives the VLM and the MCP tools.
+    const asksAgent = plan.actions.some((a) => a.kind === 'ask_agent')
+      || plan.intent === 'unknown'
+      || plan.intent === 'visual_query'
+      || plan.intent === 'object_location'
+
+    if (asksAgent) {
+      const ask = plan.actions.find((a) => a.kind === 'ask_agent')?.question || question
+      setBusy(true)
+      let reply = plan.reply || 'One moment…'
+      try {
+        const turn = await invokeAgent(ask, 'voice-sim')
+        reply = turn.reply || reply
+        for (const call of turn.tool_calls || []) {
+          useRoomStore.getState().pushLog({
+            level: 'info',
+            text: `Voice · ${call.name}${call.result ? ` · ${call.result}` : ''}`,
+          })
+        }
+      } catch (error) {
+        reply = plan.reply && plan.reply !== 'One moment…'
+          ? plan.reply
+          : `I couldn't reach AuraAssist (${error.message}). Start it with: python -m uvicorn server.main:app --port 8000`
+      }
+      setBusy(false)
+      addMessage('alexa', reply)
+      if (voiceOutputSupported) {
+        wakeSuspendedRef.current = true
+        wakeRecRef.current?.stop()
+        speak(reply).then(() => {
+          wakeSuspendedRef.current = false
+          if (wakeWantedRef.current) wakeRecRef.current?.start()
+        })
+      }
+      return
+    }
+
     // Reply first - the simulated device acks (~150ms each) must never make
     // the user wait. Patches land optimistically the moment commit() is
     // called, so the 3D scene reacts instantly too.
@@ -97,7 +138,6 @@ export function VoiceAssistant() {
           store.pushLog({ level: 'info', text: `${ASSISTANT_NAME} · camera to the ${ROOMS[action.roomId]?.label || action.roomId}` })
           return undefined
         }
-        if (action.kind === 'call') return store[action.name]?.(...(action.args || []))
         return undefined
       }))
     } finally {

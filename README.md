@@ -40,19 +40,33 @@ The app uses HMR. For headless/automated verification in dev, the app exposes:
 
 Note: In dev, `preserveDrawingBuffer` is enabled to allow canvas pixel readback for QA.
 
-### AuraAssist MCP server (initial simulator integration)
+### AuraAssist MCP server
 
-The repository includes a self-hosted Streamable HTTP MCP endpoint at `http://localhost:8787/mcp`. Start it in a second terminal:
+The MCP server is located in the separate `aura-assist` folder at `C:\Users\DELL\Desktop\aura-assist`. It's a Python FastAPI server with Streamable HTTP at `http://localhost:8000/mcp`.
 
+**To start the server:**
 ```bash
-npm run mcp
+cd "C:\Users\DELL\Desktop\aura-assist"
+pip install -r requirements.txt
+python -m uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The server advertises protocol version `2025-11-25` and currently provides six tools: `get_home_snapshot`, `get_recent_events`, `find_object`, `control_device`, `run_routine`, and `get_daily_briefing`. Run `bedtime` or `leaving_home` with `run_routine`; the tool first returns a confirmation ID, which must be sent back in the follow-up call to execute the routine. Device and routine state are held in the MCP server process and reset when it restarts. This first integration is a standalone simulated home model; it does not yet share live state with the 3D browser store.
+**The server provides:**
+- MCP Streamable HTTP endpoint at `/mcp`
+- Amazon Bedrock VLM integration for scene understanding
+- Object finding with event memory
+- Multi-step routines with confirmation
+- Safety guardrails
 
-The HTTP endpoint accepts JSON-RPC POST requests at `/mcp`. A quick protocol check can be made with any MCP client that supports Streamable HTTP and the URL above. The `/health` endpoint reports whether the server is running. Set `MCP_PORT` to change the port and `MCP_ALLOWED_ORIGIN` to change the browser origin allowed by CORS.
-
-The initial server does not yet include camera/VLM scene descriptions, Bedrock integration, or durable event storage. Those are the next backend milestones.
+**MCP Tools:**
+- `get_home_snapshot` - Current home state with digest
+- `describe_scene` - Camera view with objects and hazards
+- `find_object` - Find items in event history
+- `control_device` - Control devices with confirmation
+- `run_routine` - Multi-step workflows
+- `get_recent_events` - Activity log
+- `generate_daily_briefing` - Daily summary
+- `set_user_preference` - Accessibility preferences
 
 ### Build
 

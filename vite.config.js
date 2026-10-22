@@ -9,6 +9,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    // Fail loudly instead of silently moving to 5174: a second dev server on
+    // another port leaves you looking at a stale build that never picks up
+    // your fixes.
+    strictPort: true,
     host: true,
     // The simulator is a browser client of the AuraAssist server: the device
     // bridge (/state/patch), the live state stream (/events/state), the agent

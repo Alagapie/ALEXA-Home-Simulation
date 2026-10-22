@@ -28,11 +28,17 @@ export function captureCanvas(quality = 0.85) {
  * Post one frame for `cameraId`. Returns the vision result, or null on failure
  * (the server being offline must never break the 3D view).
  */
-export async function describeView(cameraId, dataUrl) {
+export async function describeView(cameraId, dataUrl, onStatus) {
   const image = dataUrl || captureCanvas()
-  if (!image) return null
+  if (!image) {
+    onStatus?.({ state: 'error', detail: 'No simulator canvas frame is available' })
+    return null
+  }
   const base64 = image.split(',')[1]
-  if (!base64) return null
+  if (!base64) {
+    onStatus?.({ state: 'error', detail: 'Simulator canvas returned an invalid image' })
+    return null
+  }
 
   try {
     const res = await fetch(apiUrl('/vision/describe'), {
@@ -40,11 +46,19 @@ export async function describeView(cameraId, dataUrl) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ camera_id: cameraId, image_base64: base64, mime: 'image/jpeg' }),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      onStatus?.({ state: 'error', detail: `Camera upload failed (HTTP ${res.status})` })
+      return null
+    }
     const body = await res.json()
-    if (body.error) return null
+    if (body.error) {
+      onStatus?.({ state: 'error', detail: `Vision server: ${body.error}` })
+      return null
+    }
+    onStatus?.({ state: 'online', detail: `Camera frame received for ${cameraId}` })
     return body
-  } catch {
+  } catch (error) {
+    onStatus?.({ state: 'error', detail: `Camera upload could not reach ${apiUrl('/vision/describe')}: ${error.message}` })
     return null
   }
 }
@@ -55,21 +69,35 @@ export async function describeView(cameraId, dataUrl) {
  * Returns a stop function. Callers (App) wire it up once; it no-ops safely when
  * the server is unreachable, so the simulator stays fully usable offline.
  */
-export function watchCamera({ getRoom, intervalMs = 1500, settleMs = 900 } = {}) {
+export function watchCamera({ getRoom, onStatus, intervalMs = 1500, settleMs = 1400, retryMs = 5000, refreshMs = 30000 } = {}) {
   let stopped = false
   let lastRoom = null
+  let nextAttemptAt = 0
   let sending = false
 
   const tick = async () => {
     if (stopped || sending) return
     const room = getRoom?.() || window.__roomStore?.getState?.().currentRoom
-    if (!room || room === lastRoom) return
-    lastRoom = room
+    const roomChanged = room && room !== lastRoom
+    if (!room || (!roomChanged && Date.now() < nextAttemptAt)) return
     sending = true
     try {
       // Wait for the camera tween to land before grabbing the frame.
-      await new Promise((r) => window.setTimeout(r, settleMs))
-      if (!stopped) await describeView(room)
+      if (roomChanged) await new Promise((r) => window.setTimeout(r, settleMs))
+      if (stopped) return
+      // Remember the attempted room so a failure obeys retryMs instead of
+      // treating every interval tick as a new room change.
+      lastRoom = room
+      onStatus?.({ state: 'sending', detail: `Sending ${room} camera frame` })
+      const result = await describeView(room, undefined, onStatus)
+      // A failed first request must not permanently suppress this room. Also
+      // refresh occasionally so later voice searches use a recent frame after
+      // a server restart or reconnect while the user stays in the same room.
+      if (result) {
+        nextAttemptAt = Date.now() + refreshMs
+      } else {
+        nextAttemptAt = Date.now() + retryMs
+      }
     } finally {
       sending = false
     }

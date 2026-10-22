@@ -1,8 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bot, Check, Plug, RotateCcw, Send, Terminal, X } from 'lucide-react'
+import { Bot, Check, Ear, Mic, MicOff, Plug, RotateCcw, Send, Terminal, X } from 'lucide-react'
 import { invokeAgent, resetAgent, resetState, fetchHealth } from '../services/auraApi'
 import { createMcpClient } from '../services/mcpClient'
+import { createRecognizer, createRestartableRecognizer, speak, stopSpeaking, voiceInputSupported, voiceOutputSupported } from '../services/speech'
 import { useRoomStore } from '../store/useRoomStore'
+import { setInvokeAgent } from '../assistant/brain'
+
+// Suggestions for the user
+const SUGGESTIONS = [
+  'What\'s happening at home?',
+  'Turn off the kitchen light',
+  'Prepare for bed',
+  'Lock the front door',
+  'What\'s on the coffee table?',
+  'Check the fridge',
+]
 
 /**
  * AuraAssist - the web client for the AuraAssist MCP server.
@@ -28,21 +40,15 @@ import { useRoomStore } from '../store/useRoomStore'
 
 const SESSION_ID = 'web-sim'
 
-const SUGGESTIONS = [
-  'What\'s happening at home?',
-  'Turn off the kitchen light',
-  'Prepare for bed',
-  'Lock the front door',
-]
-
 /** Canned arguments per tool so the MCP tab can demo calls without typing JSON. */
 const SAMPLE_ARGS = {
   get_home_snapshot: {},
-  get_recent_events: {},
-  get_room_devices: { room: 'living' },
-  find_object: { item: 'keys' },
+  get_recent_events: { since_minutes: 480 },
+  find_object: { object_name: 'phone' },
+  describe_scene: { camera_id: 'living' },
   control_device: { device_id: 'tableLamp', action: 'toggle' },
-  control_scene: { scene_name: 'good_night' },
+  run_routine: { routine_name: 'bedtime', confirm: false },
+  generate_daily_briefing: { audience: 'user' },
   set_user_preference: { key: 'preferred_temperature', value: '21' },
 }
 
@@ -252,6 +258,13 @@ export function AuraChat() {
   const [awaiting, setAwaiting] = useState(null)
   const inputRef = useRef(null)
   const msgId = useRef(1)
+  
+  // Register the agent transport so the rule engine in assistant/brain.js can
+  // hand camera questions over to AuraAssist.
+  useEffect(() => {
+    setInvokeAgent(invokeAgent)
+    return () => setInvokeAgent(null)
+  }, [])
 
   /* Probe the server once so the panel can be honest about being offline. */
   useEffect(() => {
@@ -302,12 +315,14 @@ export function AuraChat() {
         tools: turn.tool_calls || [],
         engine: turn.engine,
       })
+      if (voiceOutputSupported) speak(turn.reply)
     } catch (error) {
       setOnline(false)
       push({
         role: 'assistant',
         text: `I can't reach the AuraAssist server (${error.message}). Start it with: python -m uvicorn server.main:app --port 8000`,
       })
+      if (voiceOutputSupported) speak(`I can't reach the server right now.`)
     } finally {
       setBusy(false)
       inputRef.current?.focus()

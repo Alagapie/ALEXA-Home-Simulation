@@ -63,7 +63,11 @@ export const createInitialDevices = () => ({
   // makes the rooms feel lived in.
   phone: {
     id: 'phone', type: 'prop', propKind: 'phone', room: 'living', name: 'Table Phone',
-    screen: false, charging: true, battery: 68, online: true,
+    location: 'on the coffee table',
+    // The screen stays lit: a face-up phone with a dark, switched-off screen
+    // reads as a smudge to the vision model, and "where is my phone" has to
+    // work from the camera, not just from the device list.
+    screen: true, charging: true, battery: 68, online: true,
   },
   tvRemote: {
     id: 'tvRemote', type: 'prop', propKind: 'remote', room: 'living', name: 'TV Remote',

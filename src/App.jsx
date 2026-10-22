@@ -89,6 +89,22 @@ export default function App() {
         })
       }
 
+      // Start vision as soon as server discovery succeeds. Device adapter
+      // startup is independent and must not prevent camera frames from flowing.
+      let lastCameraStatus = ''
+      stopCamera = watchCamera({
+        getRoom: () => useRoomStore.getState().currentRoom,
+        onStatus: ({ state, detail }) => {
+          const signature = `${state}:${detail}`
+          if (signature === lastCameraStatus || state === 'sending') return
+          lastCameraStatus = signature
+          useRoomStore.getState().pushLog({
+            level: state === 'online' ? 'ok' : 'error',
+            text: `Vision camera ${detail}`,
+          })
+        },
+      })
+
       try {
         await deviceService.connect?.()
       } catch (error) {
@@ -120,11 +136,6 @@ export default function App() {
         },
       })
 
-      // The 3D scene is also the home's camera: whenever the user looks at a
-      // different room, post a real frame so the VLM analyses what they see.
-      // It no-ops silently when the server is unreachable, so the 3D view is
-      // never affected by the server being offline.
-      stopCamera = watchCamera({ getRoom: () => useRoomStore.getState().currentRoom })
     }
 
     start()
@@ -150,8 +161,11 @@ export default function App() {
             antialias: true,
             powerPreference: 'high-performance',
             toneMapping: THREE.ACESFilmicToneMapping,
-            // lets dev tooling read back the canvas for automated checks
-            preserveDrawingBuffer: import.meta.env.DEV,
+            // The camera service reads the canvas back to post a frame to the
+            // VLM, so the drawing buffer has to survive the frame in every
+            // build - not just in dev. Without it a production build sends
+            // blank pictures to the vision model.
+            preserveDrawingBuffer: true,
           }}
           camera={{ position: START_CAMERA.position, fov: 46, near: 0.1, far: 140 }}
           onPointerMissed={() => useRoomStore.getState().clearSelection()}

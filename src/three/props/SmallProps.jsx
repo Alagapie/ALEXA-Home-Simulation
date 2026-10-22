@@ -24,17 +24,17 @@ export function Phone({ id = 'phone', position = [0, 0, 0], rotation = [0, 0, 0]
   const lit = device.screen
   return (
     <Clickable id={id} position={position} rotation={rotation} labelOffset={[0, 0.14, 0]}>
-      {/* body */}
-      <RoundedBox args={[0.078, 0.01, 0.156]} radius={0.008} smoothness={3} castShadow>
-        <meshStandardMaterial color="#14171b" roughness={0.32} metalness={0.42} />
+      {/* body - a light bezel so the shape reads as a phone against the wood */}
+      <RoundedBox args={[0.096, 0.012, 0.19]} radius={0.009} smoothness={3} castShadow>
+        <meshStandardMaterial color="#d9dde3" roughness={0.35} metalness={0.35} />
       </RoundedBox>
       {/* screen (faces up) */}
-      <mesh position={[0, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[0.068, 0.142]} />
+      <mesh position={[0, 0.007, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[0.084, 0.174]} />
         <meshStandardMaterial
           color="#0b0f16"
           emissive={lit ? '#8fd6ff' : '#0b0f16'}
-          emissiveIntensity={lit ? 1.35 : 0.06}
+          emissiveIntensity={lit ? 1.9 : 0.06}
           roughness={0.25}
           toneMapped={false}
         />
